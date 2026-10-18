@@ -15,10 +15,6 @@ import ewm.location.model.Location;
 import ewm.location.model.LocationType;
 import ewm.location.repository.LocationRepository;
 import lombok.RequiredArgsConstructor;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.GeometryFactory;
-import org.locationtech.jts.geom.Point;
-import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -37,8 +33,6 @@ public class LocationServiceImpl implements LocationService {
     private final LocationMapper locationMapper;
     private final EventMapper eventMapper;
     private final EventsRepository eventRepository;
-
-    private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Override
     @Transactional
@@ -80,7 +74,6 @@ public class LocationServiceImpl implements LocationService {
         if (dto.getLat() != null && dto.getLon() != null) {
             existing.setLat(dto.getLat());
             existing.setLon(dto.getLon());
-            existing.setCenter(createPoint(dto.getLon(), dto.getLat()));
         }
         if (dto.getRadiusMeters() != null) {
             existing.setRadiusMeters(dto.getRadiusMeters());
@@ -101,8 +94,10 @@ public class LocationServiceImpl implements LocationService {
 
     @Override
     public List<LocationDto> findLocationsContainingPoint(Float lat, Float lon) {
-        Point point = createPoint(lon, lat);
-        return locationRepository.findLocationsContainingPoint(point)
+        if (lat == null || lon == null) {
+            throw new ValidationException("Координаты lat и lon обязательны");
+        }
+        return locationRepository.findLocationsContainingPoint(lat, lon)
                 .stream()
                 .map(locationMapper::toDto)
                 .toList();
@@ -173,12 +168,6 @@ public class LocationServiceImpl implements LocationService {
     private Location getLocationOrThrow(Long id) {
         return locationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Локация не найдена с id: " + id));
-    }
-
-    private Point createPoint(double lon, double lat) {
-        Point point = geometryFactory.createPoint(new Coordinate(lon, lat));
-        point.setSRID(4326);
-        return point;
     }
 
     private EventDistanceDto mapToEventDistanceDto(Object[] row) {

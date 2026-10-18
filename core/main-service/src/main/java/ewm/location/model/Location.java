@@ -2,7 +2,6 @@ package ewm.location.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.locationtech.jts.geom.Point;
 import java.time.Instant;
 
 @Entity
@@ -27,9 +26,6 @@ public class Location {
     @Enumerated(EnumType.STRING)
     @Column(name = "location_type")
     private LocationType locationType;
-
-    @Column(name = "center", columnDefinition = "geography(Point,4326)")
-    private Point center;
 
     @Column(name = "radius_meters")
     private Double radiusMeters;
