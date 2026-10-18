@@ -1,3 +1,6 @@
+server:
+  port: 0
+
 spring:
   application:
     name: config-server
@@ -7,18 +10,14 @@ spring:
     config:
       server:
         native:
-          searchLocations:
-            - classpath:/config/stats/{application}
-            - classpath:/config/core/{application}
-            - classpath:/config/infra/{application}
-
-server:
-  port: 0
+          search-locations:
+            - file:./infra/config-repo/core/
+            - file:./infra/config-repo/stats/
+            - file:./infra/config-repo/infra/
 
 eureka:
   client:
-    serviceUrl:
+    service-url:
       defaultZone: http://localhost:8761/eureka/
-
   instance:
     instance-id: "${spring.application.name}:${random.value}"
