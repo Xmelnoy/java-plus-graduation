@@ -86,7 +86,8 @@
 
 	<modules>
 		<module>stats</module>
-		<module>main-service</module>
+        <module>infra</module>
+		<module>core</module>
 	</modules>
 
 	<properties>
