@@ -1,6 +1,7 @@
 package dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import enums.State;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,4 +25,8 @@ public class EventShortDto {
     private Boolean paid;
     private String title;
     private Long views;
+
+    private State state;
+    private Boolean requestModeration;
+    private Integer participantLimit;
 }

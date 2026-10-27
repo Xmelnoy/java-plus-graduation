@@ -1,10 +1,13 @@
 package ewm.events.service;
 
-import client.StatsClient;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import ewm.categories.model.Category;
-import ewm.categories.repository.CategoryRepository;
+import dto.CategoryDto;
+import dto.EventShortDto;
+import ewm.client.CategoryClient;
+import ewm.client.RequestClient;
+import ewm.client.UserClient;
 import ewm.dto.EndpointHitDto;
 import ewm.dto.ViewStatsDto;
 import ewm.events.dto.*;
@@ -17,21 +20,18 @@ import ewm.events.model.Event;
 import ewm.events.model.State;
 import ewm.events.repository.EventsRepository;
 import ewm.events.repository.specification.EventSpecification;
-import ewm.exception.ConflictException;
-import ewm.exception.NotFoundException;
-import ewm.exception.ValidationException;
+import exception.ConflictException;
+import exception.NotFoundException;
+import exception.ValidationException;
 import ewm.participationRequest.dto.EventRequestStatusUpdateRequest;
 import ewm.participationRequest.dto.EventRequestStatusUpdateResult;
 import ewm.participationRequest.dto.EventRequestsCountDto;
 import ewm.participationRequest.dto.ParticipationRequestDto;
-import ewm.participationRequest.mapper.ParticipationRequestMapper;
-import ewm.participationRequest.model.ParticipationRequest;
-import ewm.participationRequest.model.ParticipationStatus;
-import ewm.participationRequest.repository.ParticipationRequestsRepository;
-import ewm.users.model.User;
-import ewm.users.repository.UserRepository;
+import dto.UserShortDto;
+import feign.FeignException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -45,6 +45,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -54,10 +55,10 @@ public class EventsServiceImpl implements EventsService {
     private final EventMapper eventMapper;
     private final StatsClient statsClient;
     private final ObjectMapper objectMapper;
-    private final CategoryRepository categoryRepository;
-    private final UserRepository userRepository;
-    private final ParticipationRequestsRepository participationRequestsRepository;
-    private final ParticipationRequestMapper participationRequestMapper;
+
+    private final UserClient userClient;
+    private final CategoryClient categoryClient;
+    private final RequestClient requestClient;
 
     private static final String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern(DATE_FORMAT);
@@ -66,7 +67,6 @@ public class EventsServiceImpl implements EventsService {
     @Override
     @Transactional(readOnly = true)
     public List<EventShortDto> getEvents(PublicEventParams params, HttpServletRequest request) {
-
         LocalDateTime startDate = params.getRangeStart();
         LocalDateTime endDate = params.getRangeEnd();
 
@@ -95,7 +95,6 @@ public class EventsServiceImpl implements EventsService {
     @Override
     @Transactional(readOnly = true)
     public List<EventFullDto> getAdminEvents(AdminEventParams params) {
-
         LocalDateTime startDate = params.getRangeStart();
         LocalDateTime endDate = params.getRangeEnd();
 
@@ -119,14 +118,13 @@ public class EventsServiceImpl implements EventsService {
                         .and(EventSpecification.dateBefore(endDate)));
 
         Page<Event> page = eventsRepository.findAll(spec, pageRequest);
-
         List<Event> events = page.getContent();
 
         if (events.isEmpty()) {
             return Collections.emptyList();
         }
 
-        List<EventFullDto> eventFullDtoList = eventMapper.toEventFullDtoList(page.getContent());
+        List<EventFullDto> eventFullDtoList = eventMapper.toEventFullDtoList(events);
         enrichEventFullDtosWithStats(eventFullDtoList);
 
         return eventFullDtoList;
@@ -152,8 +150,8 @@ public class EventsServiceImpl implements EventsService {
 
     @Override
     public EventFullDto createEvent(Long userId, NewEventDto dto) {
-        User user = getUserOrThrow(userId);
-        Category category = getCategoryOrThrow(dto.getCategory());
+        UserShortDto user = getUserOrThrow(userId);
+        CategoryDto category = getCategoryOrThrow(dto.getCategory());
 
         LocalDateTime eventDate = parseAndValidateEventDate(
                 dto.getEventDate(),
@@ -185,7 +183,6 @@ public class EventsServiceImpl implements EventsService {
 
         return dto;
     }
-
 
     @Override
     @Transactional(readOnly = true)
@@ -252,8 +249,8 @@ public class EventsServiceImpl implements EventsService {
         if (dto.getRequestModeration() != null) event.setRequestModeration(dto.getRequestModeration());
 
         if (dto.getCategory() != null) {
-            Category category = getCategoryOrThrow(dto.getCategory());
-            event.setCategory(category);
+            getCategoryOrThrow(dto.getCategory());
+            event.setCategoryId(dto.getCategory()); // храним ID, а не объект
         }
 
         if (dto.getLocation() != null) {
@@ -263,8 +260,8 @@ public class EventsServiceImpl implements EventsService {
 
         if (dto.getStateAction() != null) {
             switch (dto.getStateAction()) {
-                case StateAction.SEND_TO_REVIEW -> event.setState(State.PENDING);
-                case StateAction.CANCEL_REVIEW -> event.setState(State.CANCELED);
+                case SEND_TO_REVIEW -> event.setState(State.PENDING);
+                case CANCEL_REVIEW -> event.setState(State.CANCELED);
                 default -> throw new ValidationException("Неизвестное состояние: " + dto.getStateAction());
             }
         }
@@ -279,102 +276,16 @@ public class EventsServiceImpl implements EventsService {
 
     @Override
     public List<ParticipationRequestDto> getEventRequests(Long userId, Long eventId) {
-        Event event = eventsRepository.findByIdAndInitiatorId(eventId, userId)
-                .orElseThrow(() -> new ValidationException("Event с id=" + eventId + " не найден"));
-
-        List<ParticipationRequest> participationRequests = participationRequestsRepository.findAllByEventId(eventId);
-        return participationRequestMapper.toDtoList(participationRequests);
+        // ️ Временно: перенести в request-service
+        throw new UnsupportedOperationException("Метод должен быть в request-service");
     }
 
     @Override
     @Transactional
     public EventRequestStatusUpdateResult updateEventRequests(Long userId, Long eventId,
                                                               EventRequestStatusUpdateRequest request) {
-        Event event = eventsRepository.findByIdAndInitiatorId(eventId, userId)
-                .orElseThrow(() -> new NotFoundException("Event с id=" + eventId + " не найден"));
-
-        List<Long> requestIds = request.getRequestIds();
-        if (requestIds == null || requestIds.isEmpty()) {
-            return EventRequestStatusUpdateResult.builder()
-                    .confirmedRequests(List.of())
-                    .rejectedRequests(List.of())
-                    .build();
-        }
-
-        List<ParticipationRequest> requests = participationRequestsRepository.findAllById(requestIds);
-
-        boolean hasNotPending = requests.stream()
-                .anyMatch(r -> r.getStatus() != ParticipationStatus.PENDING);
-        if (hasNotPending) {
-            throw new ConflictException("статус можно изменить только у заявок, находящихся в состоянии ожидания");
-        }
-
-        ParticipationStatus targetStatus = request.getStatus();
-        if (targetStatus != ParticipationStatus.CONFIRMED && targetStatus != ParticipationStatus.REJECTED) {
-            throw new ConflictException("доступные статусы только CONFIRMED/REJECTED");
-        }
-
-        if (targetStatus == ParticipationStatus.REJECTED) {
-            requests.forEach(r -> r.setStatus(ParticipationStatus.REJECTED));
-            List<ParticipationRequest> saved = participationRequestsRepository.saveAll(requests);
-
-            List<ParticipationRequestDto> toResponse = participationRequestMapper.toDtoList(saved);
-            return EventRequestStatusUpdateResult.builder()
-                    .confirmedRequests(List.of())
-                    .rejectedRequests(toResponse)
-                    .build();
-        }
-
-        Integer limit = event.getParticipantLimit();
-        if (limit != null && limit > 0) {
-            long alreadyConfirmed = participationRequestsRepository.countByEventIdAndStatus(eventId,
-                    ParticipationStatus.CONFIRMED);
-            long available = limit - alreadyConfirmed;
-
-            if (available <= 0) {
-                throw new ConflictException("достигнут лимит по заявкам на данное событие");
-            }
-
-            List<ParticipationRequest> toConfirm = new ArrayList<>();
-            List<ParticipationRequest> toReject = new ArrayList<>();
-
-            for (ParticipationRequest r : requests) {
-                if (available > 0) {
-                    r.setStatus(ParticipationStatus.CONFIRMED);
-                    toConfirm.add(r);
-                    available--;
-                } else {
-                    r.setStatus(ParticipationStatus.REJECTED);
-                    toReject.add(r);
-                }
-            }
-
-            participationRequestsRepository.saveAll(requests);
-
-            long confirmedNow = toConfirm.size();
-            long totalConfirmed = alreadyConfirmed + confirmedNow;
-            if (totalConfirmed >= limit) {
-                List<ParticipationRequest> pending = participationRequestsRepository.findAllByEventIdAndStatus(eventId,
-                        ParticipationStatus.PENDING);
-
-                pending.forEach(r -> r.setStatus(ParticipationStatus.REJECTED));
-                participationRequestsRepository.saveAll(pending);
-            }
-
-            return EventRequestStatusUpdateResult.builder()
-                    .confirmedRequests(participationRequestMapper.toDtoList(toConfirm))
-                    .rejectedRequests(participationRequestMapper.toDtoList(toReject))
-                    .build();
-        }
-
-
-        requests.forEach(r -> r.setStatus(ParticipationStatus.CONFIRMED));
-        List<ParticipationRequest> saved = participationRequestsRepository.saveAll(requests);
-
-        return EventRequestStatusUpdateResult.builder()
-                .confirmedRequests(participationRequestMapper.toDtoList(saved))
-                .rejectedRequests(List.of())
-                .build();
+        // ⚠️ Временно: перенести в request-service
+        throw new UnsupportedOperationException("Метод должен быть в request-service");
     }
 
     private void sendHitToStats(String uri, String ip) {
@@ -387,7 +298,6 @@ public class EventsServiceImpl implements EventsService {
     }
 
     private Map<Long, Long> getViewsMap(List<Long> eventIds) {
-
         if (eventIds.isEmpty()) {
             return Collections.emptyMap();
         }
@@ -419,26 +329,30 @@ public class EventsServiceImpl implements EventsService {
         return stats.stream()
                 .collect(Collectors.toMap(
                         stat -> Long.parseLong(
-                                stat.getUri().substring(
-                                        stat.getUri().lastIndexOf('/') + 1
-                                )
+                                stat.getUri().substring(stat.getUri().lastIndexOf('/') + 1)
                         ),
                         ViewStatsDto::getHits,
                         (existing, replacement) -> existing
                 ));
     }
 
+    // ✅ Теперь получает данные через Feign вместо ParticipationRequestsRepository
     private Map<Long, Long> getConfirmedRequestsMap(List<Long> eventIds) {
         if (eventIds == null || eventIds.isEmpty()) {
             return Collections.emptyMap();
         }
 
-        return participationRequestsRepository.getConfirmedRequests(eventIds)
-                        .stream()
-                        .collect(Collectors.toMap(
-                                EventRequestsCountDto::eventId,
-                                EventRequestsCountDto::confirmedRequests
-                        ));
+        try {
+            return requestClient.getConfirmedRequestsCounts(eventIds)
+                    .stream()
+                    .collect(Collectors.toMap(
+                            EventRequestsCountDto::getEventId,
+                            EventRequestsCountDto::getConfirmedRequests
+                    ));
+        } catch (FeignException e) {
+            log.warn("Не удалось получить количество заявок: {}", e.getMessage());
+            return Collections.emptyMap();
+        }
     }
 
     private void enrichEventWithStats(EventFullDto dto) {
@@ -500,14 +414,22 @@ public class EventsServiceImpl implements EventsService {
         return eventDate;
     }
 
-    private User getUserOrThrow(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("User с id=" + userId + " не найден"));
+    // ✅ Теперь возвращает DTO, а не сущность
+    private UserShortDto getUserOrThrow(Long userId) {
+        try {
+            return userClient.getUserById(userId);
+        } catch (FeignException.NotFound e) {
+            throw new NotFoundException("User с id=" + userId + " не найден");
+        }
     }
 
-    private Category getCategoryOrThrow(Long categoryId) {
-        return categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new NotFoundException("Category с id=" + categoryId + " не найдена"));
+    // ✅ Теперь возвращает DTO, а не сущность
+    private CategoryDto getCategoryOrThrow(Long categoryId) {
+        try {
+            return categoryClient.getCategoryById(categoryId);
+        } catch (FeignException.NotFound e) {
+            throw new NotFoundException("Category с id=" + categoryId + " не найдена");
+        }
     }
 
     private void updateAdminEventFields(Event event, UpdateEventAdminRequest request) {
@@ -527,10 +449,6 @@ public class EventsServiceImpl implements EventsService {
                 throw new ValidationException("Дата события не может быть в прошлом");
             }
 
-            if (event.getState() == State.PUBLISHED && eventDate.isBefore(event.getPublishedOn().plusHours(1))) {
-                throw new ConflictException("Дата начала изменяемого события должна быть не ранее чем за час от даты публикации");
-            }
-
             event.setEventDate(eventDate);
         }
 
@@ -542,7 +460,9 @@ public class EventsServiceImpl implements EventsService {
         if (request.getRequestModeration() != null) event.setRequestModeration(request.getRequestModeration());
 
         if (request.getCategory() != null) {
-            event.setCategory(getCategoryOrThrow(request.getCategory()));
+            // ✅ Проверяем через Feign
+            getCategoryOrThrow(request.getCategory());
+            event.setCategoryId(request.getCategory());
         }
 
         if (request.getLocation() != null) {
@@ -557,14 +477,14 @@ public class EventsServiceImpl implements EventsService {
         }
 
         switch (stateAction) {
-            case StateAction.PUBLISH_EVENT -> {
+            case PUBLISH_EVENT -> {
                 if (event.getState() != State.PENDING) {
                     throw new ConflictException("Событие должно находиться в состоянии ожидания публикации");
                 }
                 event.setState(State.PUBLISHED);
                 event.setPublishedOn(LocalDateTime.now());
             }
-            case StateAction.REJECT_EVENT -> {
+            case REJECT_EVENT -> {
                 if (event.getState() == State.PUBLISHED) {
                     throw new ConflictException("Нельзя отклонить опубликованное событие");
                 }

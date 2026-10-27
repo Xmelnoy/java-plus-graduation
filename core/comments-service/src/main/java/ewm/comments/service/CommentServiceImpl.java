@@ -1,24 +1,23 @@
 package ewm.comments.service;
 
+import dto.EventShortDto;
+import dto.UserShortDto;
+import ewm.client.EventClient;
+import ewm.client.UserClient;
 import ewm.comments.dto.CommentDto;
 import ewm.comments.dto.NewCommentDto;
 import ewm.comments.dto.UpdateCommentDto;
 import ewm.comments.mapper.CommentMapper;
 import ewm.comments.model.Comment;
 import ewm.comments.repository.CommentRepository;
-import ewm.events.model.Event;
-import ewm.events.model.State;
-import ewm.events.repository.EventsRepository;
-import ewm.exception.ConflictException;
-import ewm.exception.NotFoundException;
-import ewm.users.model.User;
-import ewm.users.repository.UserRepository;
+import exception.ConflictException;
+import exception.NotFoundException;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -31,8 +30,8 @@ import java.util.stream.Collectors;
 public class CommentServiceImpl implements CommentService {
 
     private final CommentRepository commentRepository;
-    private final UserRepository userRepository;
-    private final EventsRepository eventRepository;
+    private final UserClient userClient;
+    private final EventClient eventClient;
     private final CommentMapper commentMapper;
 
     @Transactional
@@ -40,20 +39,23 @@ public class CommentServiceImpl implements CommentService {
     public CommentDto createComment(Long userId, Long eventId, NewCommentDto newCommentDto) {
         log.info("Добавление комментария от пользователя id={} к событию id={}", userId, eventId);
 
-        User author = getUserOrThrow(userId);
-        Event event = getEventOrThrow(eventId);
+        UserShortDto author = getUserOrThrow(userId);
+        EventShortDto event = getEventOrThrow(eventId);
 
-        if (!event.getState().equals(State.PUBLISHED)) {
-            throw new ConflictException("Нельзя оставить комментарий к неопубликованному событию");
-        }
+//        if (!event.getState().name().equals("PUBLISHED")) {
+//            throw new ConflictException("Нельзя оставить комментарий к неопубликованному событию");
+//        }
 
         Comment comment = new Comment();
         comment.setText(newCommentDto.getText());
-        comment.setAuthor(author);
-        comment.setEvent(event);
+
+        comment.setAuthorId(userId);
+        comment.setEventId(eventId);
         comment.setCreatedOn(LocalDateTime.now());
 
-        return commentMapper.toCommentDto(commentRepository.save(comment));
+        Comment savedComment = commentRepository.save(comment);
+
+        return commentMapper.toCommentDto(savedComment, author, event);
     }
 
     @Transactional
@@ -64,13 +66,12 @@ public class CommentServiceImpl implements CommentService {
         getUserOrThrow(userId);
         Comment comment = getCommentOrThrow(commentId);
 
-        if (!comment.getAuthor().getId().equals(userId)) {
+        if (!comment.getAuthorId().equals(userId)) {
             throw new ConflictException("Вы не можете редактировать чужой комментарий");
         }
 
         comment.setText(updateDto.getText());
-
-        return commentMapper.toCommentDto(commentRepository.save(comment));
+        return commentMapper.toCommentDto(commentRepository.save(comment), null, null);
     }
 
     @Transactional
@@ -81,7 +82,7 @@ public class CommentServiceImpl implements CommentService {
         getUserOrThrow(userId);
         Comment comment = getCommentOrThrow(commentId);
 
-        if (!comment.getAuthor().getId().equals(userId)) {
+        if (!comment.getAuthorId().equals(userId)) {
             throw new ConflictException("Вы не можете удалить чужой комментарий");
         }
 
@@ -105,7 +106,11 @@ public class CommentServiceImpl implements CommentService {
 
         return commentRepository.findAllByEventId(eventId, pageRequest)
                 .stream()
-                .map(commentMapper::toCommentDto)
+                .map(comment -> {
+                    UserShortDto author = getUserOrThrow(comment.getAuthorId());
+                    EventShortDto event = getEventOrThrow(comment.getEventId());
+                    return commentMapper.toCommentDto(comment, author, event);
+                })
                 .collect(Collectors.toList());
     }
 
@@ -116,12 +121,13 @@ public class CommentServiceImpl implements CommentService {
         getUserOrThrow(userId);
         Comment comment = getCommentOrThrow(commentId);
 
-        if (!comment.getAuthor().getId().equals(userId)) {
+        if (!comment.getAuthorId().equals(userId)) {
             throw new ConflictException("Вы не можете посмотреть чужой комментарий через приватный эндпоинт");
         }
 
-        return commentMapper.toCommentDto(comment);
-
+        UserShortDto author = getUserOrThrow(comment.getAuthorId());
+        EventShortDto event = getEventOrThrow(comment.getEventId());
+        return commentMapper.toCommentDto(comment, author, event);
     }
 
     @Transactional
@@ -135,28 +141,39 @@ public class CommentServiceImpl implements CommentService {
             comment.setText(updateDto.getText());
         }
 
-        return commentMapper.toCommentDto(commentRepository.save(comment));
-    }
-
-    private User getUserOrThrow(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException("Пользователь с id=" + userId + " не найден"));
-    }
-
-    private Event getEventOrThrow(Long eventId) {
-        return eventRepository.findById(eventId)
-                .orElseThrow(() -> new NotFoundException("Событие с id=" + eventId + " не найдено"));
-    }
-
-    private Comment getCommentOrThrow(Long commentId) {
-        return commentRepository.findById(commentId)
-                .orElseThrow(() -> new NotFoundException("Комментарий с id=" + commentId + " не найден"));
+        Comment saved = commentRepository.save(comment);
+        UserShortDto author = getUserOrThrow(saved.getAuthorId());
+        EventShortDto event = getEventOrThrow(saved.getEventId());
+        return commentMapper.toCommentDto(saved, author, event);
     }
 
     @Override
     public CommentDto getCommentByIdForAdmin(Long commentId) {
         log.info("Получение комментария по id={} администратором", commentId);
         Comment comment = getCommentOrThrow(commentId);
-        return commentMapper.toCommentDto(comment);
+        UserShortDto author = getUserOrThrow(comment.getAuthorId());
+        EventShortDto event = getEventOrThrow(comment.getEventId());
+        return commentMapper.toCommentDto(comment, author, event);
+    }
+
+    private UserShortDto getUserOrThrow(Long userId) {
+        try {
+            return userClient.getUserById(userId);
+        } catch (FeignException.NotFound e) {
+            throw new NotFoundException("Пользователь с id=" + userId + " не найден");
+        }
+    }
+
+    private EventShortDto getEventOrThrow(Long eventId) {
+        try {
+            return eventClient.getEventById(eventId);
+        } catch (FeignException.NotFound e) {
+            throw new NotFoundException("Событие с id=" + eventId + " не найдено");
+        }
+    }
+
+    private Comment getCommentOrThrow(Long commentId) {
+        return commentRepository.findById(commentId)
+                .orElseThrow(() -> new NotFoundException("Комментарий с id=" + commentId + " не найден"));
     }
 }

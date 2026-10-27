@@ -1,4 +1,4 @@
-package ewm.location.dto;
+package dto;
 
 import lombok.*;
 

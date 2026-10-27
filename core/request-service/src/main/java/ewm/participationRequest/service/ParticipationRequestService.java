@@ -1,5 +1,8 @@
 package ewm.participationRequest.service;
 
+import ewm.participationRequest.dto.EventRequestStatusUpdateRequest;
+import ewm.participationRequest.dto.EventRequestStatusUpdateResult;
+import ewm.participationRequest.dto.EventRequestsCountDto;
 import ewm.participationRequest.dto.ParticipationRequestDto;
 
 import java.util.List;
@@ -11,4 +14,11 @@ public interface ParticipationRequestService {
     ParticipationRequestDto addParticipationRequest(Long userId, Long eventId);
 
     ParticipationRequestDto cancelRequest(Long userId, Long requestId);
+
+    List<ParticipationRequestDto> getEventRequests(Long userId, Long eventId);
+
+    EventRequestStatusUpdateResult updateEventRequests(Long userId, Long eventId,
+                                                       EventRequestStatusUpdateRequest request);
+
+    List<EventRequestsCountDto> getConfirmedRequestsCounts(List<Long> eventIds);
 }

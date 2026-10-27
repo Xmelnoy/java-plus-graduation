@@ -1,7 +1,6 @@
 package ewm.participationRequest.model;
 
-import ewm.events.model.Event;
-import ewm.users.model.User;
+import enums.ParticipationStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,13 +18,11 @@ public class ParticipationRequest {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "requester_id", nullable = false)
-    private User requester;
+    @Column(name = "requester_id", nullable = false)
+    private Long requesterId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "event_id", nullable = false)
-    private Event event;
+    @Column(name = "event_id", nullable = false)
+    private Long eventId;
 
     @Column(name = "created", nullable = false)
     private LocalDateTime created;

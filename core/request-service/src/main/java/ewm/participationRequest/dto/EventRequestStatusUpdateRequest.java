@@ -1,6 +1,6 @@
 package ewm.participationRequest.dto;
 
-import ewm.participationRequest.model.ParticipationStatus;
+import enums.ParticipationStatus;
 import lombok.Data;
 
 import java.util.List;

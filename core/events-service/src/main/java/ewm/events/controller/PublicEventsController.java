@@ -1,7 +1,7 @@
 package ewm.events.controller;
 
 import ewm.events.dto.EventFullDto;
-import ewm.events.dto.EventShortDto;
+import dto.EventShortDto;
 import ewm.events.dto.EventSort;
 import ewm.events.dto.params.PublicEventParams;
 import ewm.events.service.EventsService;

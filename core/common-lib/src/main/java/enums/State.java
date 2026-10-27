@@ -1,4 +1,4 @@
-package ewm.events.model;
+package enums;
 
 public enum State {
     PENDING,

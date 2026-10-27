@@ -1,6 +1,14 @@
 server:
   port: 8761
 
+spring:
+  application:
+    name: discovery-server
+
+  cloud:
+    config:
+      enabled: false
+
 eureka:
   instance:
     hostname: localhost

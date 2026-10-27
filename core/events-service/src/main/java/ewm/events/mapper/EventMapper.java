@@ -1,15 +1,12 @@
 package ewm.events.mapper;
 
-import ewm.categories.dto.CategoryDto;
-import ewm.categories.model.Category;
+import dto.CategoryDto;
 import ewm.events.dto.EventFullDto;
-import ewm.events.dto.EventShortDto;
-import ewm.location.dto.LocationDto;
+import dto.EventShortDto;
 import ewm.events.dto.NewEventDto;
 import ewm.events.model.Event;
-import ewm.location.model.Location;
-import ewm.users.dto.UserShortDto;
-import ewm.users.model.User;
+import dto.LocationDto;
+import dto.UserShortDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -23,10 +20,11 @@ public interface EventMapper {
     @Mapping(target = "publishedOn", ignore = true)
     @Mapping(target = "state", ignore = true)
     @Mapping(target = "eventDate", ignore = true)
-    @Mapping(target = "category", source = "category")
-    @Mapping(target = "initiator", source = "initiator")
-    @Mapping(target = "location", source = "dto.location")
-    Event toEvent(NewEventDto dto, Category category, User initiator);
+    @Mapping(target = "categoryId", source = "category.id")
+    @Mapping(target = "initiatorId", source = "initiator.id")
+    @Mapping(target = "location.lat", source = "dto.location.lat")
+    @Mapping(target = "location.lon", source = "dto.location.lon")
+    Event toEvent(NewEventDto dto, CategoryDto category, UserShortDto initiator);
 
     @Mapping(target = "views", ignore = true)
     @Mapping(target = "confirmedRequests", ignore = true)
@@ -39,11 +37,6 @@ public interface EventMapper {
     List<EventFullDto> toEventFullDtoList(List<Event> events);
     List<EventShortDto> toEventShortDtoList(List<Event> events);
 
-    CategoryDto toCategoryDto(Category category);
-    UserShortDto toUserShortDto(User user);
-
-    LocationDto toLocationDto(Location location);
-
     @Mapping(target = "id", ignore = true)
-    Location toLocation(LocationDto dto);
+    ewm.location.model.Location toLocation(LocationDto dto);
 }

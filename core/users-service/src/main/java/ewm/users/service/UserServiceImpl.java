@@ -1,7 +1,7 @@
 package ewm.users.service;
 
-import ewm.exception.ConflictException;
-import ewm.exception.NotFoundException;
+import exception.ConflictException;
+import exception.NotFoundException;
 import ewm.users.dto.NewUserRequest;
 import ewm.users.dto.UserDto;
 import ewm.users.mapper.UserMapper;

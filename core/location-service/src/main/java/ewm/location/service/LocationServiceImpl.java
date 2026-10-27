@@ -1,13 +1,12 @@
 package ewm.location.service;
 
-import ewm.events.dto.EventShortDto;
-import ewm.events.mapper.EventMapper;
-import ewm.events.repository.EventsRepository;
-import ewm.exception.NotFoundException;
-import ewm.exception.ValidationException;
+import dto.EventShortDto;
+
+import exception.NotFoundException;
+import exception.ValidationException;
 import ewm.location.dto.DistanceDto;
 import ewm.location.dto.EventDistanceDto;
-import ewm.location.dto.LocationDto;
+import dto.LocationDto;
 import ewm.location.dto.NewLocationDto;
 import ewm.location.dto.UpdateLocationDto;
 import ewm.location.mapper.LocationMapper;
@@ -31,8 +30,6 @@ public class LocationServiceImpl implements LocationService {
 
     private final LocationRepository locationRepository;
     private final LocationMapper locationMapper;
-    private final EventMapper eventMapper;
-    private final EventsRepository eventRepository;
 
     @Override
     @Transactional

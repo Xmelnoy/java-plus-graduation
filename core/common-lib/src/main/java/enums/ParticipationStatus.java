@@ -1,4 +1,4 @@
-package ewm.participationRequest.model;
+package enums;
 
 public enum ParticipationStatus {
     PENDING,

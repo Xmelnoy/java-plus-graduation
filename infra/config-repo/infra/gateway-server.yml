@@ -8,10 +8,10 @@ spring:
         locator:
           enabled: false
       routes:
-        - id: main-service
-          uri: lb://main-service
+        - id: event-service
+          uri: lb://event-service
           predicates:
-            - Path=/**
+            - Path=/events/**, admin/events/**
 
 management:
   endpoints:
