@@ -1,8 +1,6 @@
 package ewm.events.model;
 
-import ewm.categories.model.Category;
-import ewm.location.model.Location;
-import ewm.users.model.User;
+import enums.State;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,9 +22,8 @@ public class Event {
     @Column(name = "annotation", nullable = false, length = 2000)
     private String annotation;
 
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
-    private Category category;
+    private Long categoryId;
 
     @Column(name = "created_on", nullable = false)
     private LocalDateTime createdOn;
@@ -37,13 +34,11 @@ public class Event {
     @Column(name = "event_date", nullable = false)
     private LocalDateTime eventDate;
 
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "initiator_id", nullable = false)
-    private User initiator;
+    private Long initiatorId;
 
-    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinColumn(name = "location_id", nullable = false)
-    private Location location;
+    @Column(name = "location_id", nullable = false)
+    private Long locationId;
 
     @Column(name = "paid", nullable = false)
     @Builder.Default

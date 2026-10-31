@@ -1,7 +1,7 @@
 package ewm.events.controller;
 
 import ewm.events.dto.EventFullDto;
-import ewm.events.dto.EventShortDto;
+import dto.EventShortDto;
 import ewm.events.dto.NewEventDto;
 import ewm.events.dto.UpdateEventUserRequest;
 import ewm.events.dto.params.PaginationParams;

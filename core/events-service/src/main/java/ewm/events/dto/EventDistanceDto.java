@@ -1,4 +1,4 @@
-package ewm.location.dto;
+package ewm.events.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;

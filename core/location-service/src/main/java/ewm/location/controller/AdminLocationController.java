@@ -66,10 +66,4 @@ public class AdminLocationController {
         List<LocationDto> locations = locationService.findLocationsContainingPoint(lat, lon);
         return ResponseEntity.ok(locations);
     }
-
-    @GetMapping("/{locationId}/events")
-    public ResponseEntity<List<EventShortDto>> getEventsInLocation(@PathVariable Long locationId) {
-        List<EventShortDto> events = locationService.findEventsInLocation(locationId);
-        return ResponseEntity.ok(events);
-    }
 }

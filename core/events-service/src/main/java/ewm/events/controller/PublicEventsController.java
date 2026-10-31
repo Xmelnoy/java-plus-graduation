@@ -1,12 +1,11 @@
 package ewm.events.controller;
 
-import ewm.events.dto.EventFullDto;
 import dto.EventShortDto;
 import ewm.events.dto.EventSort;
 import ewm.events.dto.params.PublicEventParams;
 import ewm.events.service.EventsService;
-import ewm.location.dto.DistanceDto;
-import ewm.location.dto.EventDistanceDto;
+import ewm.events.dto.DistanceDto;
+import ewm.events.dto.EventDistanceDto;
 import ewm.location.service.LocationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.Positive;
@@ -59,13 +58,6 @@ public class PublicEventsController {
                 .build();
 
         return ResponseEntity.ok(eventsService.getEvents(searchParams, request));
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<EventFullDto> getEvent(@PathVariable Long id, HttpServletRequest request) {
-        log.info("GET /events/{}", id);
-
-        return ResponseEntity.ok(eventsService.getEvent(id, request));
     }
 
     @GetMapping("/locations/near")
