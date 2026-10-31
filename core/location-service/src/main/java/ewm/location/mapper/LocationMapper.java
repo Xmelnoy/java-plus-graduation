@@ -1,6 +1,6 @@
 package ewm.location.mapper;
 
-import ewm.location.dto.LocationDto;
+import dto.LocationDto;
 import ewm.location.dto.NewLocationDto;
 import ewm.location.model.Location;
 import ewm.location.model.LocationType;

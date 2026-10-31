@@ -1,7 +1,6 @@
 package ewm.location.service;
 
 import dto.EventShortDto;
-
 import exception.NotFoundException;
 import exception.ValidationException;
 import ewm.location.dto.DistanceDto;
