@@ -28,7 +28,6 @@ public class CompilationServiceImpl implements CompilationService {
     private final CompilationRepository compilationRepository;
     private final EventsClient eventsClient;
     private final CompilationMapper compilationMapper;
-    List<EventShortDto> events;
 
     @Override
     public CompilationDto save(NewCompilationDto newCompilationDto) {
@@ -55,6 +54,8 @@ public class CompilationServiceImpl implements CompilationService {
 
     @Override
     public CompilationDto update(Long compId, UpdateCompilationRequest updateCompilationRequest) {
+        List<EventShortDto> events;
+
         log.info("update compilation request {}", updateCompilationRequest);
         Compilation compilation = compilationRepository.findById(compId)
                 .orElseThrow(() ->

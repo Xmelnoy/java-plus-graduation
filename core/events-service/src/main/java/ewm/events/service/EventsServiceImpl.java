@@ -360,10 +360,8 @@ public class EventsServiceImpl implements EventsService {
         }
 
         if (dto.getLocation() != null) {
-            Long locationId = dto.getLocation().getId();
-
-            locationClient.getLocationById(locationId);
-            event.setLocationId(locationId);
+            LocationDto location = resolveLocation(dto.getLocation());
+            event.setLocationId(location.getId());
         }
 
         if (dto.getStateAction() != null) {
@@ -545,10 +543,8 @@ public class EventsServiceImpl implements EventsService {
         }
 
         if (request.getLocation() != null) {
-            Long locationId = request.getLocation().getId();
-
-            locationClient.getLocationById(locationId);
-            event.setLocationId(locationId);
+            LocationDto location = resolveLocation(request.getLocation());
+            event.setLocationId(location.getId());
         }
     }
 
@@ -730,5 +726,26 @@ public class EventsServiceImpl implements EventsService {
                 .toList();
 
         return result;
+    }
+
+    private LocationDto resolveLocation(LocationDto location) {
+        if (location.getId() != null) {
+            return locationClient.getLocationById(location.getId());
+        }
+
+        LocationDto created = locationClient.createLocation(
+                new LocationCoordinatesDto(
+                        location.getLat(),
+                        location.getLon()
+                )
+        );
+
+        if (created == null || created.getId() == null) {
+            throw new IllegalStateException(
+                    "Не удалось создать локацию"
+            );
+        }
+
+        return created;
     }
 }

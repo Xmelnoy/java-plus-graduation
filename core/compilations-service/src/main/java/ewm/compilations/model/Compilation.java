@@ -28,7 +28,7 @@ public class Compilation {
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
-            name = "compilation_events",
+            name = "compilation_event_ids",
             joinColumns = @JoinColumn(name = "compilation_id")
     )
     @Column(name = "event_id", nullable = false)

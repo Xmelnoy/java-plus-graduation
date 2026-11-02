@@ -12,13 +12,6 @@ import java.util.Optional;
 
 public interface CompilationRepository extends JpaRepository<Compilation, Long> {
 
-    @Override
-    @EntityGraph(attributePaths = "events")
-    Optional<Compilation> findById(Long id);
-
-    @EntityGraph(attributePaths = "events")
-    List<Compilation> findAll();
-
     @Query("""
             SELECT c
             FROM Compilation c
