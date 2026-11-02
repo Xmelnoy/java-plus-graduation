@@ -1,5 +1,6 @@
 package ewm.participationRequest.service;
 
+import enums.State;
 import enums.ParticipationStatus;
 import dto.EventShortDto;
 import exception.ConflictException;
@@ -60,7 +61,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
             throw new ConflictException("Инициатор события не может добавить запрос на участие в своём событии");
         }
 
-        if (!"PUBLISHED".equals(event.getState())) {
+        if (event.getState() != State.PUBLISHED) {
             throw new ConflictException("Событие еще не опубликовано");
         }
 
