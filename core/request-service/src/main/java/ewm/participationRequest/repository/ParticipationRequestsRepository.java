@@ -14,16 +14,19 @@ public interface ParticipationRequestsRepository
         extends JpaRepository<ParticipationRequest, Long> {
 
     @Query("""
-            select new ewm.participationRequest.dto.EventRequestsCountDto(
-                r.eventId,
-                count(r.id)
-            )
-            from ParticipationRequest r
-            where r.status = ewm.participationRequest.model.ParticipationStatus.CONFIRMED
-              and r.eventId in :eventIds
-            group by r.eventId
-            """)
-    List<EventRequestsCountDto> getConfirmedRequests(@Param("eventIds") List<Long> eventIds);
+        select new ewm.participationRequest.dto.EventRequestsCountDto(
+            r.eventId,
+            count(r.id)
+        )
+        from ParticipationRequest r
+        where r.status = :status
+          and r.eventId in :eventIds
+        group by r.eventId
+        """)
+    List<EventRequestsCountDto> getConfirmedRequests(
+            @Param("eventIds") List<Long> eventIds,
+            @Param("status") ParticipationStatus status
+    );
 
     long countByEventIdAndStatus(Long eventId, ParticipationStatus status);
 

@@ -213,7 +213,11 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
         if (eventIds == null || eventIds.isEmpty()) {
             return List.of();
         }
-        return requestRepository.getConfirmedRequests(eventIds);
+
+        return requestRepository.getConfirmedRequests(
+                eventIds,
+                ParticipationStatus.CONFIRMED
+        );
     }
 
     private UserShortDto getUserOrThrow(Long userId) {
