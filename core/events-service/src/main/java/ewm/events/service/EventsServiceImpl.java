@@ -137,10 +137,9 @@ public class EventsServiceImpl implements EventsService {
             return Collections.emptyList();
         }
 
-        List<EventFullDto> eventFullDtoList = eventMapper.toEventFullDtoList(events);
-        enrichEventFullDtosWithStats(eventFullDtoList);
-
-        return eventFullDtoList;
+        return events.stream()
+                .map(this::toEnrichedFullDto)
+                .toList();
     }
 
     @Override
@@ -155,14 +154,7 @@ public class EventsServiceImpl implements EventsService {
 
         sendHitToStats("/ewm/events/" + id, request.getRemoteAddr());
 
-        EventFullDto dto = eventMapper.toEventFullDto(event);
-        enrichEventWithStats(dto);
-
-        dto.setCategory(categoryClient.getCategoryById(event.getCategoryId()));
-        dto.setInitiator(userClient.getUserById(event.getInitiatorId()));
-        dto.setLocation(locationClient.getLocationById(event.getLocationId()));
-
-        return dto;
+        return toEnrichedFullDto(event);
     }
 
     @Override
@@ -212,13 +204,12 @@ public class EventsServiceImpl implements EventsService {
     @Override
     @Transactional(readOnly = true)
     public EventFullDto getUserEvent(UserEventPathParams params) {
-        Event event = eventsRepository.findByIdAndInitiatorId(params.getEventId(), params.getUserId())
-                .orElseThrow(() -> new NotFoundException("Event с id=" + params.getEventId() + " не найден"));
+        Event event = eventsRepository.findByIdAndInitiatorId(
+                        params.getEventId(), params.getUserId())
+                .orElseThrow(() -> new NotFoundException(
+                        "Event с id=" + params.getEventId() + " не найден"));
 
-        EventFullDto dto = eventMapper.toEventFullDto(event);
-        enrichEventWithStats(dto);
-
-        return dto;
+        return toEnrichedFullDto(event);
     }
 
     @Override
@@ -239,26 +230,23 @@ public class EventsServiceImpl implements EventsService {
             return Collections.emptyList();
         }
 
-        List<EventShortDto> dtos = eventMapper.toEventShortDtoList(events);
-        enrichEventsWithStats(dtos);
-
-        return dtos;
+        return events.stream()
+                .map(this::toEnrichedShortDto)
+                .toList();
     }
 
     @Override
     public EventFullDto updateAdminEvent(Long eventId, UpdateEventAdminRequest request) {
         Event event = eventsRepository.findById(eventId)
-                .orElseThrow(() -> new NotFoundException("Event с id=" + eventId + " не найден"));
+                .orElseThrow(() -> new NotFoundException(
+                        "Event с id=" + eventId + " не найден"));
 
         updateAdminEventFields(event, request);
         handleAdminStateAction(event, request.getStateAction());
 
         event = eventsRepository.save(event);
 
-        EventFullDto result = eventMapper.toEventFullDto(event);
-        enrichEventWithStats(result);
-
-        return result;
+        return toEnrichedFullDto(event);
     }
 
     @Override
@@ -374,10 +362,30 @@ public class EventsServiceImpl implements EventsService {
 
         event = eventsRepository.save(event);
 
-        EventFullDto result = eventMapper.toEventFullDto(event);
-        enrichEventWithStats(result);
+        return toEnrichedFullDto(event);
+    }
 
-        return result;
+    private EventFullDto toEnrichedFullDto(Event event) {
+        EventFullDto dto = eventMapper.toEventFullDto(event);
+
+        dto.setCategory(categoryClient.getCategoryById(event.getCategoryId()));
+        dto.setInitiator(userClient.getUserById(event.getInitiatorId()));
+        dto.setLocation(locationClient.getLocationById(event.getLocationId()));
+
+        enrichEventWithStats(dto);
+
+        return dto;
+    }
+
+    private EventShortDto toEnrichedShortDto(Event event) {
+        EventShortDto dto = eventMapper.toEventShortDto(event);
+
+        dto.setCategory(categoryClient.getCategoryById(event.getCategoryId()));
+        dto.setInitiator(userClient.getUserById(event.getInitiatorId()));
+
+        enrichEventsWithStats(List.of(dto));
+
+        return dto;
     }
 
     private Map<Long, Long> getViewsMap(List<Long> eventIds) {
@@ -585,10 +593,9 @@ public class EventsServiceImpl implements EventsService {
             return Collections.emptyList();
         }
 
-        List<EventShortDto> dtos = eventMapper.toEventShortDtoList(events);
-        enrichEventsWithStats(dtos);
-
-        return dtos;
+        return events.stream()
+                .map(this::toEnrichedShortDto)
+                .toList();
     }
 
     private List<EventShortDto> getEventsSortedByViews(Specification<Event> spec, PublicEventParams params) {
@@ -598,10 +605,11 @@ public class EventsServiceImpl implements EventsService {
             return Collections.emptyList();
         }
 
-        List<EventShortDto> dtos = eventMapper.toEventShortDtoList(allEvents);
-        enrichEventsWithStats(dtos);
+        List<EventShortDto> dtos = allEvents.stream()
+                .map(this::toEnrichedShortDto)
+                .collect(Collectors.toList());
 
-        dtos.sort(Comparator.comparing(EventShortDto::getViews).reversed());
+        dtos.sort(Comparator.comparing(EventShortDto::getViews).reversed());;
 
         int from = params.getFrom();
         int size = params.getSize();
