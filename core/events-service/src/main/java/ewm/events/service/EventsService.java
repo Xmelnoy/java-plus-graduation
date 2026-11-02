@@ -35,4 +35,6 @@ public interface EventsService {
     EventShortDto getInternalEvent(Long eventId);
 
     List<EventShortDto> getInternalEvents(List<Long> eventIds);
+
+    boolean hasEventsByCategory(Long categoryId);
 }

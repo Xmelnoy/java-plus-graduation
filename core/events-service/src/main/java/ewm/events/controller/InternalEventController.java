@@ -32,4 +32,13 @@ public class InternalEventController {
                 eventsService.getInternalEvents(ids)
         );
     }
+
+    @GetMapping("/categories/{categoryId}/exists")
+    public ResponseEntity<Boolean> hasEventsByCategory(
+            @PathVariable Long categoryId
+    ) {
+        return ResponseEntity.ok(
+                eventsService.hasEventsByCategory(categoryId)
+        );
+    }
 }

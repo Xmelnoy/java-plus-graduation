@@ -159,6 +159,11 @@ public class EventsServiceImpl implements EventsService {
 
     @Override
     public EventFullDto createEvent(Long userId, NewEventDto dto) {
+        LocalDateTime eventDate = parseAndValidateEventDate(
+                dto.getEventDate(),
+                "Дата события должна быть не ранее чем через 2 часа от текущего момента"
+        );
+
         UserShortDto user = getUserOrThrow(userId);
         CategoryDto category = getCategoryOrThrow(dto.getCategory());
 
@@ -174,11 +179,6 @@ public class EventsServiceImpl implements EventsService {
                     "Не удалось создать локацию для события"
             );
         }
-
-        LocalDateTime eventDate = parseAndValidateEventDate(
-                dto.getEventDate(),
-                "Дата события должна быть не ранее чем через 2 часа от текущего момента"
-        );
 
         Event event = eventMapper.toEvent(dto, category, user);
 
@@ -579,15 +579,37 @@ public class EventsServiceImpl implements EventsService {
         }
     }
 
-    private List<EventShortDto> getEventsSortedByDate(Specification<Event> spec, PublicEventParams params) {
+    private List<EventShortDto> getEventsSortedByDate(
+            Specification<Event> spec,
+            PublicEventParams params
+    ) {
+        if (Boolean.TRUE.equals(params.getOnlyAvailable())) {
+            List<Event> availableEvents = new ArrayList<>(
+                    filterAvailableEvents(eventsRepository.findAll(spec))
+            );
+
+            availableEvents.sort(Comparator.comparing(Event::getEventDate));
+
+            int from = params.getFrom();
+
+            if (from >= availableEvents.size()) {
+                return Collections.emptyList();
+            }
+
+            int toIndex = Math.min(from + params.getSize(), availableEvents.size());
+
+            return availableEvents.subList(from, toIndex).stream()
+                    .map(this::toEnrichedShortDto)
+                    .toList();
+        }
+
         PageRequest pageRequest = PageRequest.of(
                 params.getFrom() / params.getSize(),
                 params.getSize(),
                 Sort.by(Sort.Direction.ASC, "eventDate")
         );
 
-        Page<Event> page = eventsRepository.findAll(spec, pageRequest);
-        List<Event> events = page.getContent();
+        List<Event> events = eventsRepository.findAll(spec, pageRequest).getContent();
 
         if (events.isEmpty()) {
             return Collections.emptyList();
@@ -603,6 +625,10 @@ public class EventsServiceImpl implements EventsService {
 
         if (allEvents.isEmpty()) {
             return Collections.emptyList();
+        }
+
+        if (Boolean.TRUE.equals(params.getOnlyAvailable())) {
+            allEvents = filterAvailableEvents(allEvents);
         }
 
         List<EventShortDto> dtos = allEvents.stream()
@@ -755,5 +781,29 @@ public class EventsServiceImpl implements EventsService {
         }
 
         return created;
+    }
+
+    private List<Event> filterAvailableEvents(List<Event> events) {
+        if (events.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> eventIds = events.stream()
+                .map(Event::getId)
+                .toList();
+
+        Map<Long, Long> confirmedRequests = getConfirmedRequestsMap(eventIds);
+
+        return events.stream()
+                .filter(event -> event.getParticipantLimit() == 0
+                        || confirmedRequests.getOrDefault(event.getId(), 0L)
+                        < event.getParticipantLimit())
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasEventsByCategory(Long categoryId) {
+        return eventsRepository.existsByCategoryId(categoryId);
     }
 }

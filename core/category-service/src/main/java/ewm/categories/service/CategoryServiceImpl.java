@@ -5,6 +5,7 @@ import ewm.categories.dto.NewCategoryDto;
 import ewm.categories.mapper.CategoryMapper;
 import ewm.categories.model.Category;
 import ewm.categories.repository.CategoryRepository;
+import ewm.client.EventClient;
 import exception.ConflictException;
 import exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final CategoryMapper categoryMapper;
+    private final EventClient eventClient;
 
     @Override
     public CategoryDto createCategory(NewCategoryDto newCategoryDto) {
@@ -49,7 +51,15 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     public void deleteCategory(Long catId) {
         if (!categoryRepository.existsById(catId)) {
-            throw new NotFoundException("Категория с id=" + catId + " не найдена");
+            throw new NotFoundException(
+                    "Категория с id=" + catId + " не найдена"
+            );
+        }
+
+        if (eventClient.hasEventsByCategory(catId)) {
+            throw new ConflictException(
+                    "Нельзя удалить категорию, к которой привязаны события"
+            );
         }
 
         categoryRepository.deleteById(catId);
