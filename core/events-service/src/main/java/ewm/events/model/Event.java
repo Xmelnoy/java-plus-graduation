@@ -22,7 +22,7 @@ public class Event {
     @Column(name = "annotation", nullable = false, length = 2000)
     private String annotation;
 
-    @JoinColumn(name = "category_id", nullable = false)
+    @Column(name = "category_id", nullable = false)
     private Long categoryId;
 
     @Column(name = "created_on", nullable = false)
@@ -34,7 +34,7 @@ public class Event {
     @Column(name = "event_date", nullable = false)
     private LocalDateTime eventDate;
 
-    @JoinColumn(name = "initiator_id", nullable = false)
+    @Column(name = "initiator_id", nullable = false)
     private Long initiatorId;
 
     @Column(name = "location_id", nullable = false)

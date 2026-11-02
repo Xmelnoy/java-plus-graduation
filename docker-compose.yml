@@ -1,78 +1,174 @@
 services:
-  stats-server:
+
+  users-db:
+    image: postgres:16.1
+    container_name: ewm-users-db
     ports:
-      - "9090:9090"
-    build: ./stats/stats-server
-    image: stats-server
-    container_name: stats-server
-    depends_on:
-      stats-db:
-        condition: service_healthy
+      - "6503:5432"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://stats-db:5432/stats
-      - SPRING_DATASOURCE_USERNAME=dbuser
-      - SPRING_DATASOURCE_PASSWORD=12345
+      POSTGRES_DB: ewm_users
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: 12345
+    volumes:
+      - users-data:/var/lib/postgresql/data
+      - ./core/users-service/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbuser -d ewm_users"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  categories-db:
+    image: postgres:16.1
+    container_name: ewm-categories-db
+    ports:
+      - "6504:5432"
+    environment:
+      POSTGRES_DB: ewm_categories
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: 12345
+    volumes:
+      - categories-data:/var/lib/postgresql/data
+      - ./core/category-service/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbuser -d ewm_categories"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  events-db:
+    image: postgres:16.1
+    container_name: ewm-events-db
+    ports:
+      - "6505:5432"
+    environment:
+      POSTGRES_DB: ewm_events
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: 12345
+    volumes:
+      - events-data:/var/lib/postgresql/data
+      - ./core/events-service/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbuser -d ewm_events"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  requests-db:
+    image: postgres:16.1
+    container_name: ewm-requests-db
+    ports:
+      - "6506:5432"
+    environment:
+      POSTGRES_DB: ewm_requests
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: 12345
+    volumes:
+      - requests-data:/var/lib/postgresql/data
+      - ./core/request-service/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbuser -d ewm_requests"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  compilations-db:
+    image: postgres:16.1
+    container_name: ewm-compilations-db
+    ports:
+      - "6507:5432"
+    environment:
+      POSTGRES_DB: ewm_compilations
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: 12345
+    volumes:
+      - compilations-data:/var/lib/postgresql/data
+      - ./core/compilations-service/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbuser -d ewm_compilations"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  locations-db:
+    image: postgres:16.1
+    container_name: ewm-locations-db
+    ports:
+      - "6508:5432"
+    environment:
+      POSTGRES_DB: ewm_locations
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: 12345
+    volumes:
+      - locations-data:/var/lib/postgresql/data
+      - ./core/location-service/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbuser -d ewm_locations"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  comments-db:
+    image: postgres:16.1
+    container_name: ewm-comments-db
+    ports:
+      - "6509:5432"
+    environment:
+      POSTGRES_DB: ewm_comments
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: 12345
+    volumes:
+      - comments-data:/var/lib/postgresql/data
+      - ./core/comments-service/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbuser -d ewm_comments"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - app-network
 
   stats-db:
     image: postgres:16.1
-    container_name: stats-db
+    container_name: ewm-stats-db
     ports:
       - "6501:5432"
     environment:
-      - POSTGRES_PASSWORD=12345
-      - POSTGRES_USER=dbuser
-      - POSTGRES_DB=stats
+      POSTGRES_DB: stats
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: 12345
     volumes:
-      - ./stats/stats-server/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - stats-data:/var/lib/postgresql/data
+      - ./stats/stats-server/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dbuser -d stats"]
       interval: 5s
       timeout: 5s
       retries: 10
-      start_period: 10s
     networks:
       - app-network
 
-  ewm-service:
-    ports:
-      - "8080:8080"
-    build: ./main-service
-    image: main-service
-    container_name: main-service
-    depends_on:
-      ewm-db:
-        condition: service_healthy
-      stats-server:
-        condition: service_started
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://ewm-db:5432/ewm
-      - SPRING_DATASOURCE_USERNAME=dbuser
-      - SPRING_DATASOURCE_PASSWORD=12345
-      - STATS_SERVER_URL=http://stats-server:9090
-    networks:
-      - app-network
-
-  ewm-db:
-    image: postgis/postgis:16-3.4
-    container_name: ewm-db
-    ports:
-      - "6502:5432"
-    environment:
-      - POSTGRES_PASSWORD=12345
-      - POSTGRES_USER=dbuser
-      - POSTGRES_DB=ewm
-    volumes:
-      - ./main-service/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/schema.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dbuser -d ewm"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-    networks:
-      - app-network
+volumes:
+  users-data:
+  categories-data:
+  events-data:
+  requests-data:
+  compilations-data:
+  locations-data:
+  comments-data:
+  stats-data:
 
 networks:
   app-network:
