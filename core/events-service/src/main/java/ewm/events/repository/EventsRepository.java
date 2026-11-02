@@ -15,5 +15,4 @@ public interface EventsRepository extends
 
     Optional<Event> findByIdAndInitiatorId(Long eventId, Long initiatorId);
 
-    boolean existsByCategory_Id(Long categoryId);
 }
