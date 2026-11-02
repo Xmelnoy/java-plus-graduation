@@ -7,7 +7,9 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Import;
 
-@SpringBootApplication
+@SpringBootApplication(
+        scanBasePackages = {"ewm", "exception"}
+)
 @EnableFeignClients
 @EnableDiscoveryClient
 @Import(StatsClient.class)

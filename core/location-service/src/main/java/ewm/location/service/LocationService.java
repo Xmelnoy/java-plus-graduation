@@ -22,4 +22,6 @@ public interface LocationService {
 
     List<LocationDto> findLocationsContainingPoint(Float lat, Float lon);
 
+    LocationDto createFromCoordinates(Float lat, Float lon);
+
 }

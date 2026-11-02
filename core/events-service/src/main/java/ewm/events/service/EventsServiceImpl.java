@@ -3,9 +3,7 @@ package ewm.events.service;
 import client.StatsClient;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dto.CategoryDto;
-import dto.EventShortDto;
-import dto.LocationDto;
+import dto.*;
 import ewm.client.CategoryClient;
 import ewm.client.LocationClient;
 import ewm.client.RequestClient;
@@ -25,7 +23,6 @@ import ewm.events.repository.specification.EventSpecification;
 import exception.ConflictException;
 import exception.NotFoundException;
 import exception.ValidationException;
-import dto.UserShortDto;
 import feign.FeignException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -173,12 +170,27 @@ public class EventsServiceImpl implements EventsService {
         UserShortDto user = getUserOrThrow(userId);
         CategoryDto category = getCategoryOrThrow(dto.getCategory());
 
+        LocationDto location = locationClient.createLocation(
+                new LocationCoordinatesDto(
+                        dto.getLocation().getLat(),
+                        dto.getLocation().getLon()
+                )
+        );
+
+        if (location == null || location.getId() == null) {
+            throw new IllegalStateException(
+                    "Не удалось создать локацию для события"
+            );
+        }
+
         LocalDateTime eventDate = parseAndValidateEventDate(
                 dto.getEventDate(),
                 "Дата события должна быть не ранее чем через 2 часа от текущего момента"
         );
 
         Event event = eventMapper.toEvent(dto, category, user);
+
+        event.setLocationId(location.getId());
         event.setCreatedOn(LocalDateTime.now());
         event.setState(State.PENDING);
         event.setEventDate(eventDate);
@@ -186,6 +198,11 @@ public class EventsServiceImpl implements EventsService {
         event = eventsRepository.save(event);
 
         EventFullDto result = eventMapper.toEventFullDto(event);
+
+        result.setCategory(category);
+        result.setInitiator(user);
+        result.setLocation(location);
+
         result.setViews(0L);
         result.setConfirmedRequests(0L);
 
@@ -711,8 +728,6 @@ public class EventsServiceImpl implements EventsService {
                     return dto;
                 })
                 .toList();
-
-        enrichEventsWithStats(result);
 
         return result;
     }

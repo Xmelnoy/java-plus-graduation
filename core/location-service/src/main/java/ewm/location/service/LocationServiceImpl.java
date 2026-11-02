@@ -149,4 +149,31 @@ public class LocationServiceImpl implements LocationService {
             throw new ValidationException("Радиус должен быть положительным числом");
         }
     }
+
+    @Override
+    @Transactional
+    public LocationDto createFromCoordinates(Float lat, Float lon) {
+        if (lat == null || lon == null) {
+            throw new ValidationException("Координаты обязательны");
+        }
+
+        if (!Float.isFinite(lat) || lat < -90 || lat > 90) {
+            throw new ValidationException("Некорректная широта");
+        }
+
+        if (!Float.isFinite(lon) || lon < -180 || lon > 180) {
+            throw new ValidationException("Некорректная долгота");
+        }
+
+        Location location = Location.builder()
+                .lat(lat)
+                .lon(lon)
+                .locationType(LocationType.OTHER)
+                .createdAt(java.time.Instant.now())
+                .build();
+
+        Location saved = locationRepository.save(location);
+
+        return locationMapper.toDto(saved);
+    }
 }

@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 
 
-@FeignClient(name = "user-service", path = "/users", fallback = UserClientFallback.class)
+@FeignClient(name = "user-service", path = "/internal/users", fallback = UserClientFallback.class)
 public interface UserClient {
 
     @GetMapping("/{id}")
