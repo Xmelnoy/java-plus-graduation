@@ -3,7 +3,7 @@ package ewm.users.mapper;
 import org.mapstruct.Mapper;
 import ewm.users.dto.NewUserRequest;
 import ewm.users.dto.UserDto;
-import ewm.users.dto.UserShortDto;
+import dto.UserShortDto;
 import ewm.users.model.User;
 
 import java.util.List;

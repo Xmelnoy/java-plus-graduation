@@ -20,10 +20,9 @@ public interface CompilationRepository extends JpaRepository<Compilation, Long> 
     List<Compilation> findAll();
 
     @Query("""
-        SELECT c
-        FROM Compilation c
-        LEFT JOIN FETCH c.events
-        WHERE (:pinned IS NULL OR c.pinned = :pinned)
-    """)
+            SELECT c
+            FROM Compilation c
+            WHERE (:pinned IS NULL OR c.pinned = :pinned)
+            """)
     List<Compilation> findAllByPinned(@Param("pinned") Boolean pinned, Pageable pageable);
 }

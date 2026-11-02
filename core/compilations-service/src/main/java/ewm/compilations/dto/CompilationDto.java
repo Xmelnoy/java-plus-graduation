@@ -1,6 +1,6 @@
 package ewm.compilations.dto;
 
-import ewm.events.dto.EventShortDto;
+import dto.EventShortDto;
 import lombok.Data;
 
 import java.util.List;

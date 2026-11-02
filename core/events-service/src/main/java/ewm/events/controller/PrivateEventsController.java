@@ -7,9 +7,6 @@ import ewm.events.dto.UpdateEventUserRequest;
 import ewm.events.dto.params.PaginationParams;
 import ewm.events.dto.params.UserEventPathParams;
 import ewm.events.service.EventsService;
-import ewm.participationRequest.dto.EventRequestStatusUpdateRequest;
-import ewm.participationRequest.dto.EventRequestStatusUpdateResult;
-import ewm.participationRequest.dto.ParticipationRequestDto;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
@@ -88,25 +85,5 @@ public class PrivateEventsController {
 
         EventFullDto event = eventsService.updateUserEvent(pathParams, dto);
         return ResponseEntity.ok(event);
-    }
-
-    @GetMapping("/{eventId}/requests")
-    ResponseEntity<List<ParticipationRequestDto>> getEventRequests(@PathVariable long userId, @PathVariable long eventId) {
-        log.info("GET /users/{}/events/{}/requests", userId, eventId);
-
-        List<ParticipationRequestDto> eventRequests = eventsService.getEventRequests(userId, eventId);
-
-        return ResponseEntity.ok(eventRequests);
-    }
-
-    @PatchMapping("/{eventId}/requests")
-    ResponseEntity<EventRequestStatusUpdateResult> updateEventRequests(@PathVariable long userId,
-                                                       @PathVariable long eventId,
-                                                       @Valid @RequestBody EventRequestStatusUpdateRequest request) {
-        log.info("PATCH /users/{}/events/{}/requests", userId, eventId);
-
-        EventRequestStatusUpdateResult result = eventsService.updateEventRequests(userId, eventId, request);
-
-        return ResponseEntity.ok(result);
     }
 }

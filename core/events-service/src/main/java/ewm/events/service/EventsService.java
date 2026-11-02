@@ -1,13 +1,11 @@
 package ewm.events.service;
 
+import dto.EventShortDto;
 import ewm.events.dto.*;
 import ewm.events.dto.params.AdminEventParams;
 import ewm.events.dto.params.PaginationParams;
 import ewm.events.dto.params.PublicEventParams;
 import ewm.events.dto.params.UserEventPathParams;
-import ewm.participationRequest.dto.EventRequestStatusUpdateRequest;
-import ewm.participationRequest.dto.EventRequestStatusUpdateResult;
-import ewm.participationRequest.dto.ParticipationRequestDto;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
@@ -30,8 +28,7 @@ public interface EventsService {
 
     EventFullDto updateAdminEvent(Long eventId, UpdateEventAdminRequest request);
 
-    List<ParticipationRequestDto> getEventRequests(Long userId, Long eventId);
+    List<EventDistanceDto> findEventsWithinRadius(Float lat, Float lon, Double radius);
 
-    EventRequestStatusUpdateResult updateEventRequests(Long userId, Long eventId,
-                                                       EventRequestStatusUpdateRequest request);
+    DistanceDto getDistanceToEvent(Long eventId, Float lat, Float lon);
 }

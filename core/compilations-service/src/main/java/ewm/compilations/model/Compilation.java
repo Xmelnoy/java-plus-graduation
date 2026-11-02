@@ -1,6 +1,5 @@
 package ewm.compilations.model;
 
-import ewm.events.model.Event;
 import jakarta.persistence.Entity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -27,12 +26,12 @@ public class Compilation {
     @Column(nullable = false)
     private Boolean pinned;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(
             name = "compilation_events",
-            joinColumns = @JoinColumn(name = "compilation_id"),
-            inverseJoinColumns = @JoinColumn(name = "event_id")
+            joinColumns = @JoinColumn(name = "compilation_id")
     )
+    @Column(name = "event_id", nullable = false)
     @Builder.Default
-    private Set<Event> events = new HashSet<>();
+    private Set<Long> eventIds = new HashSet<>();
 }

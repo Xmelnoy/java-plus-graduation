@@ -1,11 +1,7 @@
 package ewm.events.repository.specification;
 
 import ewm.events.model.Event;
-import ewm.events.model.State;
-import ewm.participationRequest.model.ParticipationRequest;
-import ewm.participationRequest.model.ParticipationStatus;
-import jakarta.persistence.criteria.Root;
-import jakarta.persistence.criteria.Subquery;
+import enums.State;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
@@ -55,9 +51,7 @@ public class EventSpecification {
                 return cb.conjunction();
             }
 
-            return root.get("category")
-                    .get("id")
-                    .in(categories);
+            return root.get("categoryId").in(categories);
         };
     }
 
@@ -70,27 +64,6 @@ public class EventSpecification {
             }
 
             return cb.equal(root.get("paid"), paid);
-        };
-    }
-
-    public static Specification<Event> onlyAvailable(Boolean onlyAvailable) {
-        return (root, query, cb) -> {
-            if (onlyAvailable == null || !onlyAvailable) {
-                return cb.conjunction();
-            }
-
-            Subquery<Long> subquery = query.subquery(Long.class);
-            Root<ParticipationRequest> requestRoot = subquery.from(ParticipationRequest.class);
-            subquery.select(cb.count(requestRoot))
-                    .where(
-                            cb.equal(requestRoot.get("event"), root),
-                            cb.equal(requestRoot.get("status"), ParticipationStatus.CONFIRMED)
-                    );
-
-            return cb.or(
-                    cb.equal(root.get("participantLimit"), 0),
-                    cb.lessThan(subquery, root.get("participantLimit"))
-            );
         };
     }
 
@@ -123,20 +96,18 @@ public class EventSpecification {
             if (users == null || users.isEmpty()) {
                 return cb.conjunction();
             }
-            return root.get("initiator").get("id").in(users);
+
+            return root.get("initiatorId").in(users);
         };
     }
 
     public static Specification<Event> hasStates(List<State> states) {
-
         return (root, query, cb) -> {
-
             if (states == null || states.isEmpty()) {
                 return cb.conjunction();
             }
 
-            return root.get("state")
-                    .in(states);
+            return root.get("state").in(states);
         };
     }
 }

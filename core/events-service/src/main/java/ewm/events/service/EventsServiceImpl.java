@@ -1,11 +1,13 @@
 package ewm.events.service;
 
-
+import client.StatsClient;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dto.CategoryDto;
 import dto.EventShortDto;
+import dto.LocationDto;
 import ewm.client.CategoryClient;
+import ewm.client.LocationClient;
 import ewm.client.RequestClient;
 import ewm.client.UserClient;
 import ewm.dto.EndpointHitDto;
@@ -17,16 +19,12 @@ import ewm.events.dto.params.PublicEventParams;
 import ewm.events.dto.params.UserEventPathParams;
 import ewm.events.mapper.EventMapper;
 import ewm.events.model.Event;
-import ewm.events.model.State;
+import enums.State;
 import ewm.events.repository.EventsRepository;
 import ewm.events.repository.specification.EventSpecification;
 import exception.ConflictException;
 import exception.NotFoundException;
 import exception.ValidationException;
-import ewm.participationRequest.dto.EventRequestStatusUpdateRequest;
-import ewm.participationRequest.dto.EventRequestStatusUpdateResult;
-import ewm.participationRequest.dto.EventRequestsCountDto;
-import ewm.participationRequest.dto.ParticipationRequestDto;
 import dto.UserShortDto;
 import feign.FeignException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -59,10 +57,29 @@ public class EventsServiceImpl implements EventsService {
     private final UserClient userClient;
     private final CategoryClient categoryClient;
     private final RequestClient requestClient;
+    private final LocationClient locationClient;
 
     private static final String DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern(DATE_FORMAT);
     private static final String APP_NAME = "ewm-main-service";
+    private static final double EARTH_RADIUS_METERS = 6_371_000;
+
+    private double calculateDistance(
+            double lat1, double lon1,
+            double lat2, double lon2) {
+
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lonDistance = Math.toRadians(lon2 - lon1);
+
+        double a = Math.pow(Math.sin(latDistance / 2), 2)
+                + Math.cos(Math.toRadians(lat1))
+                * Math.cos(Math.toRadians(lat2))
+                * Math.pow(Math.sin(lonDistance / 2), 2);
+
+        return EARTH_RADIUS_METERS
+                * 2
+                * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -81,7 +98,6 @@ public class EventsServiceImpl implements EventsService {
                 .and(EventSpecification.hasText(params.getText()))
                 .and(EventSpecification.hasCategories(params.getCategories()))
                 .and(EventSpecification.hasPaid(params.getPaid()))
-                .and(EventSpecification.onlyAvailable(params.getOnlyAvailable()))
                 .and(EventSpecification.dateAfter(startDate))
                 .and(EventSpecification.dateBefore(endDate));
 
@@ -225,6 +241,75 @@ public class EventsServiceImpl implements EventsService {
     }
 
     @Override
+    public List<EventDistanceDto> findEventsWithinRadius(
+            Float lat, Float lon, Double radius) {
+
+        validateCoordinates(lat, lon);
+
+        if (radius == null || !Double.isFinite(radius) || radius <= 0) {
+            throw new ValidationException("Радиус должен быть положительным числом");
+        }
+
+        List<Event> events = eventsRepository.findAll(
+                EventSpecification.published()
+        );
+
+        return events.stream()
+                .map(event -> {
+                    LocationDto location = getLocationOrThrow(event.getLocationId());
+
+                    double distance = calculateDistance(
+                            lat,
+                            lon,
+                            location.getLat(),
+                            location.getLon()
+                    );
+
+                    if (distance > radius) {
+                        return null;
+                    }
+
+                    return EventDistanceDto.builder()
+                            .eventId(event.getId())
+                            .title(event.getTitle())
+                            .annotation(event.getAnnotation())
+                            .eventDate(event.getEventDate())
+                            .paid(event.getPaid())
+                            .distance(distance)
+                            .build();
+                })
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(EventDistanceDto::getDistance))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DistanceDto getDistanceToEvent(Long eventId, Float lat, Float lon) {
+
+        validateCoordinates(lat, lon);
+
+        Event event = eventsRepository.findById(eventId)
+                .orElseThrow(() ->
+                        new NotFoundException("Событие с id=" + eventId + " не найдено")
+                );
+
+        LocationDto location = getLocationOrThrow(event.getLocationId());
+
+        double distance = calculateDistance(
+                lat,
+                lon,
+                location.getLat(),
+                location.getLon()
+        );
+
+        return DistanceDto.builder()
+                .eventId(eventId)
+                .distance(distance)
+                .build();
+    }
+
+    @Override
     public EventFullDto updateUserEvent(UserEventPathParams params, UpdateEventUserRequest dto) {
         Event event = eventsRepository.findByIdAndInitiatorId(params.getEventId(), params.getUserId())
                 .orElseThrow(() -> new NotFoundException("Event с id=" + params.getEventId() + " не найден"));
@@ -254,8 +339,10 @@ public class EventsServiceImpl implements EventsService {
         }
 
         if (dto.getLocation() != null) {
-            event.getLocation().setLat(dto.getLocation().getLat());
-            event.getLocation().setLon(dto.getLocation().getLon());
+            Long locationId = dto.getLocation().getId();
+
+            locationClient.getLocationById(locationId);
+            event.setLocationId(locationId);
         }
 
         if (dto.getStateAction() != null) {
@@ -272,29 +359,6 @@ public class EventsServiceImpl implements EventsService {
         enrichEventWithStats(result);
 
         return result;
-    }
-
-    @Override
-    public List<ParticipationRequestDto> getEventRequests(Long userId, Long eventId) {
-        // ️ Временно: перенести в request-service
-        throw new UnsupportedOperationException("Метод должен быть в request-service");
-    }
-
-    @Override
-    @Transactional
-    public EventRequestStatusUpdateResult updateEventRequests(Long userId, Long eventId,
-                                                              EventRequestStatusUpdateRequest request) {
-        // ⚠️ Временно: перенести в request-service
-        throw new UnsupportedOperationException("Метод должен быть в request-service");
-    }
-
-    private void sendHitToStats(String uri, String ip) {
-        statsClient.saveHit(EndpointHitDto.builder()
-                .app(APP_NAME)
-                .uri(uri)
-                .ip(ip)
-                .timestamp(LocalDateTime.now())
-                .build());
     }
 
     private Map<Long, Long> getViewsMap(List<Long> eventIds) {
@@ -336,19 +400,16 @@ public class EventsServiceImpl implements EventsService {
                 ));
     }
 
-    // ✅ Теперь получает данные через Feign вместо ParticipationRequestsRepository
     private Map<Long, Long> getConfirmedRequestsMap(List<Long> eventIds) {
         if (eventIds == null || eventIds.isEmpty()) {
             return Collections.emptyMap();
         }
 
         try {
-            return requestClient.getConfirmedRequestsCounts(eventIds)
-                    .stream()
-                    .collect(Collectors.toMap(
-                            EventRequestsCountDto::getEventId,
-                            EventRequestsCountDto::getConfirmedRequests
-                    ));
+            Map<Long, Long> counts =
+                    requestClient.getConfirmedRequestsCount(eventIds, null);
+
+            return counts != null ? counts : Collections.emptyMap();
         } catch (FeignException e) {
             log.warn("Не удалось получить количество заявок: {}", e.getMessage());
             return Collections.emptyMap();
@@ -414,7 +475,6 @@ public class EventsServiceImpl implements EventsService {
         return eventDate;
     }
 
-    // ✅ Теперь возвращает DTO, а не сущность
     private UserShortDto getUserOrThrow(Long userId) {
         try {
             return userClient.getUserById(userId);
@@ -423,7 +483,6 @@ public class EventsServiceImpl implements EventsService {
         }
     }
 
-    // ✅ Теперь возвращает DTO, а не сущность
     private CategoryDto getCategoryOrThrow(Long categoryId) {
         try {
             return categoryClient.getCategoryById(categoryId);
@@ -460,14 +519,15 @@ public class EventsServiceImpl implements EventsService {
         if (request.getRequestModeration() != null) event.setRequestModeration(request.getRequestModeration());
 
         if (request.getCategory() != null) {
-            // ✅ Проверяем через Feign
             getCategoryOrThrow(request.getCategory());
             event.setCategoryId(request.getCategory());
         }
 
         if (request.getLocation() != null) {
-            event.getLocation().setLat(request.getLocation().getLat());
-            event.getLocation().setLon(request.getLocation().getLon());
+            Long locationId = request.getLocation().getId();
+
+            locationClient.getLocationById(locationId);
+            event.setLocationId(locationId);
         }
     }
 
@@ -535,5 +595,38 @@ public class EventsServiceImpl implements EventsService {
 
         int toIndex = Math.min(from + size, dtos.size());
         return dtos.subList(from, toIndex);
+    }
+
+    private void sendHitToStats(String uri, String ip) {
+        statsClient.saveHit(EndpointHitDto.builder()
+                .app(APP_NAME)
+                .uri(uri)
+                .ip(ip)
+                .timestamp(LocalDateTime.now())
+                .build());
+    }
+
+    private void validateCoordinates(Float lat, Float lon) {
+        if (lat == null || lon == null) {
+            throw new ValidationException("Координаты lat и lon обязательны");
+        }
+
+        if (!Float.isFinite(lat) || lat < -90 || lat > 90) {
+            throw new ValidationException("Широта должна быть от -90 до 90");
+        }
+
+        if (!Float.isFinite(lon) || lon < -180 || lon > 180) {
+            throw new ValidationException("Долгота должна быть от -180 до 180");
+        }
+    }
+
+    private LocationDto getLocationOrThrow(Long locationId) {
+        try {
+            return locationClient.getLocationById(locationId);
+        } catch (FeignException.NotFound e) {
+            throw new NotFoundException(
+                    "Локация с id=" + locationId + " не найдена"
+            );
+        }
     }
 }

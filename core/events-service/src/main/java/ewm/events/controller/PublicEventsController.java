@@ -6,7 +6,6 @@ import ewm.events.dto.params.PublicEventParams;
 import ewm.events.service.EventsService;
 import ewm.events.dto.DistanceDto;
 import ewm.events.dto.EventDistanceDto;
-import ewm.location.service.LocationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -28,7 +27,6 @@ import java.util.List;
 public class PublicEventsController {
 
     private final EventsService eventsService;
-    private final LocationService locationService;
 
     @GetMapping
     public ResponseEntity<List<EventShortDto>> getEvents(
@@ -66,7 +64,7 @@ public class PublicEventsController {
             @RequestParam Float lon,
             @RequestParam Double radius) {
         log.info("GET /events/locations/near: lat={}, lon={}, radius={}", lat, lon, radius);
-        List<EventDistanceDto> events = locationService.findEventsWithinRadius(lat, lon, radius);
+        List<EventDistanceDto> events = eventsService.findEventsWithinRadius(lat, lon, radius);
         return ResponseEntity.ok(events);
     }
 
@@ -76,7 +74,7 @@ public class PublicEventsController {
             @RequestParam Float lat,
             @RequestParam Float lon) {
         log.info("GET /events/{}/locations/distance: lat={}, lon={}", eventId, lat, lon);
-        DistanceDto distance = locationService.getDistanceToEvent(eventId, lat, lon);
+        DistanceDto distance = eventsService.getDistanceToEvent(eventId, lat, lon);
         return ResponseEntity.ok(distance);
     }
 }
