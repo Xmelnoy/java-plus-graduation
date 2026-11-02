@@ -161,6 +161,10 @@ public class EventsServiceImpl implements EventsService {
         EventFullDto dto = eventMapper.toEventFullDto(event);
         enrichEventWithStats(dto);
 
+        dto.setCategory(categoryClient.getCategoryById(event.getCategoryId()));
+        dto.setInitiator(userClient.getUserById(event.getInitiatorId()));
+        dto.setLocation(locationClient.getLocationById(event.getLocationId()));
+
         return dto;
     }
 
@@ -407,7 +411,7 @@ public class EventsServiceImpl implements EventsService {
 
         try {
             Map<Long, Long> counts =
-                    requestClient.getConfirmedRequestsCount(eventIds, null);
+                    requestClient.getConfirmedRequestsCount(eventIds);
 
             return counts != null ? counts : Collections.emptyMap();
         } catch (FeignException e) {
@@ -628,5 +632,88 @@ public class EventsServiceImpl implements EventsService {
                     "Локация с id=" + locationId + " не найдена"
             );
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public EventShortDto getInternalEvent(Long eventId) {
+        return getInternalEvents(List.of(eventId)).get(0);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EventShortDto> getInternalEvents(List<Long> eventIds) {
+        if (eventIds == null || eventIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> uniqueIds = eventIds.stream()
+                .distinct()
+                .toList();
+
+        List<Event> events = eventsRepository.findAllById(uniqueIds);
+
+        Map<Long, Event> eventsById = events.stream()
+                .collect(Collectors.toMap(
+                        Event::getId,
+                        event -> event
+                ));
+
+        if (!eventsById.keySet().containsAll(uniqueIds)) {
+            throw new NotFoundException(
+                    "Одно или несколько событий не найдены"
+            );
+        }
+
+        List<Long> categoryIds = events.stream()
+                .map(Event::getCategoryId)
+                .distinct()
+                .toList();
+
+        List<Long> userIds = events.stream()
+                .map(Event::getInitiatorId)
+                .distinct()
+                .toList();
+
+        Map<Long, CategoryDto> categoriesById =
+                categoryClient.getCategoriesByIds(categoryIds)
+                        .stream()
+                        .collect(Collectors.toMap(
+                                CategoryDto::getId,
+                                category -> category
+                        ));
+
+        Map<Long, UserShortDto> usersById =
+                userClient.getUsersByIds(userIds)
+                        .stream()
+                        .collect(Collectors.toMap(
+                                UserShortDto::getId,
+                                user -> user
+                        ));
+
+        List<EventShortDto> result = uniqueIds.stream()
+                .map(eventsById::get)
+                .map(event -> {
+                    EventShortDto dto = eventMapper.toEventShortDto(event);
+
+                    CategoryDto category = categoriesById.get(event.getCategoryId());
+                    UserShortDto initiator = usersById.get(event.getInitiatorId());
+
+                    if (category == null || initiator == null) {
+                        throw new NotFoundException(
+                                "Не удалось получить категорию или инициатора события"
+                        );
+                    }
+
+                    dto.setCategory(category);
+                    dto.setInitiator(initiator);
+
+                    return dto;
+                })
+                .toList();
+
+        enrichEventsWithStats(result);
+
+        return result;
     }
 }

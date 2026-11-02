@@ -13,7 +13,6 @@ public interface RequestClient {
 
     @GetMapping("/confirmed-counts")
     Map<Long, Long> getConfirmedRequestsCount(
-            @RequestParam("eventIds") List<Long> eventIds,
-            @RequestParam(value = "userId", required = false) Long userId
+            @RequestParam("eventIds") List<Long> eventIds
     );
 }

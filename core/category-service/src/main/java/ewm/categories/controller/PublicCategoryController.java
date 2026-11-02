@@ -20,10 +20,20 @@ public class PublicCategoryController {
 
     @GetMapping("/categories")
     public ResponseEntity<List<CategoryDto>> getCategories(
+            @RequestParam(required = false) List<Long> ids,
             @RequestParam(defaultValue = "0") @PositiveOrZero Integer from,
-            @RequestParam(defaultValue = "10") @Positive Integer size) {
-        log.info("GET /categories: from={}, size={}", from, size);
-        List<CategoryDto> categories = categoryService.getCategories(from, size);
+            @RequestParam(defaultValue = "10") @Positive Integer size
+    ) {
+        log.info("GET /categories: ids={}, from={}, size={}", ids, from, size);
+
+        List<CategoryDto> categories;
+
+        if (ids != null && !ids.isEmpty()) {
+            categories = categoryService.getCategoriesByIds(ids);
+        } else {
+            categories = categoryService.getCategories(from, size);
+        }
+
         return ResponseEntity.ok(categories);
     }
 

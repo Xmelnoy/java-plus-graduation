@@ -11,6 +11,9 @@ spring:
       discovery:
         enabled: true
         service-id: config-server
+  sql:
+    init:
+      mode: always
 
 eureka:
   client:

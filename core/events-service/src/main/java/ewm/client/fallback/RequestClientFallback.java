@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 public class RequestClientFallback implements RequestClient {
 
     @Override
-    public Map<Long, Long> getConfirmedRequestsCount(List<Long> eventIds, Long userId) {
+    public Map<Long, Long> getConfirmedRequestsCount(List<Long> eventIds) {
         log.warn("request-service недоступен. Возвращаем 0 заявок для событий {}", eventIds);
         return eventIds.stream()
                 .collect(Collectors.toMap(id -> id, id -> 0L));

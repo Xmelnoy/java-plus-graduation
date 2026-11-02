@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 
 @FeignClient(
-        name = "events-service",
+        name = "event-service",
         path = "/internal/events"
 )
 public interface EventsClient {

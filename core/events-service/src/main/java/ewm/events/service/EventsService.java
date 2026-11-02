@@ -31,4 +31,8 @@ public interface EventsService {
     List<EventDistanceDto> findEventsWithinRadius(Float lat, Float lon, Double radius);
 
     DistanceDto getDistanceToEvent(Long eventId, Float lat, Float lon);
+
+    EventShortDto getInternalEvent(Long eventId);
+
+    List<EventShortDto> getInternalEvents(List<Long> eventIds);
 }

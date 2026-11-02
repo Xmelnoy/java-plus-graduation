@@ -14,7 +14,7 @@ spring:
           enabled: false
       routes:
         - id: comments-service
-          uri: lb://comments-service
+          uri: lb://comment-service
           order: -10
           predicates:
             - Path=/events/*/comments/**,/users/*/comments/**,/admin/comments/**
@@ -32,7 +32,7 @@ spring:
           uri: lb://category-service
           predicates:
             - Path=/categories/**,/admin/categories/**
-        - id: compilations-service
+        - id: compilation-service
           uri: lb://compilations-service
           predicates:
             - Path=/compilations/**,/admin/compilations/**
@@ -40,7 +40,7 @@ spring:
           uri: lb://location-service
           predicates:
             - Path=/locations/**,/admin/locations/**
-        - id: users-service
+        - id: user-service
           uri: lb://users-service
           predicates:
             - Path=/users/**,/admin/users/**

@@ -72,4 +72,17 @@ public class CategoryServiceImpl implements CategoryService {
                 .orElseThrow(() -> new NotFoundException("Категория с id=" + catId + " не найдена"));
         return categoryMapper.toCategoryDto(category);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CategoryDto> getCategoriesByIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+
+        return categoryRepository.findAllById(ids)
+                .stream()
+                .map(categoryMapper::toCategoryDto)
+                .toList();
+    }
 }

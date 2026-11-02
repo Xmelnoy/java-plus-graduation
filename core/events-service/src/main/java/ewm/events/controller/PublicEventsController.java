@@ -1,6 +1,7 @@
 package ewm.events.controller;
 
 import dto.EventShortDto;
+import ewm.events.dto.EventFullDto;
 import ewm.events.dto.EventSort;
 import ewm.events.dto.params.PublicEventParams;
 import ewm.events.service.EventsService;
@@ -76,5 +77,17 @@ public class PublicEventsController {
         log.info("GET /events/{}/locations/distance: lat={}, lon={}", eventId, lat, lon);
         DistanceDto distance = eventsService.getDistanceToEvent(eventId, lat, lon);
         return ResponseEntity.ok(distance);
+    }
+
+    @GetMapping("/{eventId}")
+    public ResponseEntity<EventFullDto> getEvent(
+            @PathVariable Long eventId,
+            HttpServletRequest request
+    ) {
+        log.info("GET /events/{}", eventId);
+
+        return ResponseEntity.ok(
+                eventsService.getEvent(eventId, request)
+        );
     }
 }

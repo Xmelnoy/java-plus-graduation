@@ -1,5 +1,6 @@
 package ewm.users.service;
 
+import dto.UserShortDto;
 import ewm.users.dto.NewUserRequest;
 import ewm.users.dto.UserDto;
 
@@ -11,4 +12,8 @@ public interface UserService {
     List<UserDto> getUsers(List<Long> ids, Integer from, Integer size);
 
     void deleteUser(Long userId);
+
+    UserShortDto getUserById(Long userId);
+
+    List<UserShortDto> getUsersByIds(List<Long> userIds);
 }
