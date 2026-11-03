@@ -88,7 +88,7 @@ public class EventsServiceImpl implements EventsService {
             throw new ValidationException("rangeStart must be before rangeEnd");
         }
 
-        sendHitToStats("/ewm/events", request.getRemoteAddr());
+        sendHitToStats("/events", request.getRemoteAddr());
 
         Specification<Event> spec = Specification
                 .where(EventSpecification.published())
@@ -152,7 +152,7 @@ public class EventsServiceImpl implements EventsService {
             throw new NotFoundException("Event с id=" + id + " не найден");
         }
 
-        sendHitToStats("/ewm/events/" + id, request.getRemoteAddr());
+        sendHitToStats("/events/" + id, request.getRemoteAddr());
 
         return toEnrichedFullDto(event);
     }
@@ -217,7 +217,7 @@ public class EventsServiceImpl implements EventsService {
     public List<EventShortDto> getUserEvents(Long userId, PaginationParams params, HttpServletRequest request) {
         getUserOrThrow(userId);
 
-        sendHitToStats("/users/" + userId + "/ewm/events", request.getRemoteAddr());
+        sendHitToStats("/users/" + userId + "/events", request.getRemoteAddr());
 
         PageRequest pageRequest = PageRequest.of(
                 params.getFrom() / params.getSize(),
@@ -394,7 +394,7 @@ public class EventsServiceImpl implements EventsService {
         }
 
         List<String> uris = eventIds.stream()
-                .map(id -> "/ewm/events/" + id)
+                .map(id -> "/events/" + id)
                 .toList();
 
         ResponseEntity<Object> response = statsClient.getStats(
