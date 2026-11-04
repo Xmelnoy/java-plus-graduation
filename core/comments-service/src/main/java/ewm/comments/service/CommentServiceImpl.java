@@ -42,9 +42,6 @@ public class CommentServiceImpl implements CommentService {
         UserShortDto author = getUserOrThrow(userId);
         EventShortDto event = getEventOrThrow(eventId);
 
-//        if (!event.getState().name().equals("PUBLISHED")) {
-//            throw new ConflictException("Нельзя оставить комментарий к неопубликованному событию");
-//        }
 
         Comment comment = new Comment();
         comment.setText(newCommentDto.getText());
