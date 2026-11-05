@@ -1,0 +1,179 @@
+package ewm.location.service;
+
+import exception.NotFoundException;
+import exception.ValidationException;
+import dto.LocationDto;
+import ewm.location.dto.NewLocationDto;
+import ewm.location.dto.UpdateLocationDto;
+import ewm.location.mapper.LocationMapper;
+import ewm.location.model.Location;
+import ewm.location.model.LocationType;
+import ewm.location.repository.LocationRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.sql.Timestamp;
+import java.util.Arrays;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class LocationServiceImpl implements LocationService {
+
+    private final LocationRepository locationRepository;
+    private final LocationMapper locationMapper;
+
+    @Override
+    @Transactional
+    public LocationDto create(NewLocationDto dto) {
+        validateLocationType(dto.getLocationType());
+
+        Location location = locationMapper.toEntity(dto);
+        Location saved = locationRepository.save(location);
+        return locationMapper.toDto(saved);
+    }
+
+    @Override
+    public Page<LocationDto> getAll(Pageable pageable) {
+        return locationRepository.findAll(pageable).map(locationMapper::toDto);
+    }
+
+    @Override
+    public LocationDto getById(Long id) {
+        Location location = getLocationOrThrow(id);
+        return locationMapper.toDto(location);
+    }
+
+    @Override
+    @Transactional
+    public LocationDto update(Long id, UpdateLocationDto dto) {
+        validateUpdate(dto);
+
+        Location existing = getLocationOrThrow(id);
+
+        if (dto.getName() != null) {
+            existing.setName(dto.getName());
+        }
+        if (dto.getDescription() != null) {
+            existing.setDescription(dto.getDescription());
+        }
+        if (dto.getLocationType() != null) {
+            existing.setLocationType(LocationType.valueOf(dto.getLocationType().toUpperCase()));
+        }
+        if (dto.getLat() != null && dto.getLon() != null) {
+            existing.setLat(dto.getLat());
+            existing.setLon(dto.getLon());
+        }
+        if (dto.getRadiusMeters() != null) {
+            existing.setRadiusMeters(dto.getRadiusMeters());
+        }
+
+        Location updated = locationRepository.save(existing);
+        return locationMapper.toDto(updated);
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        if (!locationRepository.existsById(id)) {
+            throw new NotFoundException("Локация не найдена с id: " + id);
+        }
+        locationRepository.deleteById(id);
+    }
+
+    @Override
+    public List<LocationDto> findLocationsContainingPoint(Float lat, Float lon) {
+        if (lat == null || lon == null) {
+            throw new ValidationException("Координаты lat и lon обязательны");
+        }
+        return locationRepository.findLocationsContainingPoint(lat, lon)
+                .stream()
+                .map(locationMapper::toDto)
+                .toList();
+    }
+
+    private Location getLocationOrThrow(Long id) {
+        return locationRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Локация не найдена с id: " + id));
+    }
+
+    private void validateLocationType(String locationType) {
+        if (locationType == null || locationType.isBlank()) {
+            throw new ValidationException("Тип локации обязателен");
+        }
+        try {
+            LocationType.valueOf(locationType.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new ValidationException(
+                    "Недопустимое значение locationType: '" + locationType +
+                            "'. Допустимые значения: " + Arrays.toString(LocationType.values())
+            );
+        }
+    }
+
+    public void validateUpdate(UpdateLocationDto dto) {
+        if (dto.getName() != null) {
+            if (dto.getName().isBlank()) {
+                throw new ValidationException("Название локации не может быть пустым");
+            }
+            if (dto.getName().length() > 255) {
+                throw new ValidationException("Название локации не должно превышать 255 символов");
+            }
+        }
+
+        if (dto.getDescription() != null && dto.getDescription().length() > 1000) {
+            throw new ValidationException("Описание локации не должно превышать 1000 символов");
+        }
+
+        if (dto.getLocationType() != null) {
+            validateLocationType(dto.getLocationType());
+        }
+
+        if (dto.getLat() != null || dto.getLon() != null) {
+            if (dto.getLat() == null || dto.getLon() == null) {
+                throw new ValidationException("Координаты lat и lon должны быть указаны вместе");
+            }
+            if (dto.getLat() < -90.0 || dto.getLat() > 90.0) {
+                throw new ValidationException("Широта должна быть от -90 до 90");
+            }
+            if (dto.getLon() < -180.0 || dto.getLon() > 180.0) {
+                throw new ValidationException("Долгота должна быть от -180 до 180");
+            }
+        }
+
+        if (dto.getRadiusMeters() != null && dto.getRadiusMeters() <= 0) {
+            throw new ValidationException("Радиус должен быть положительным числом");
+        }
+    }
+
+    @Override
+    @Transactional
+    public LocationDto createFromCoordinates(Float lat, Float lon) {
+        if (lat == null || lon == null) {
+            throw new ValidationException("Координаты обязательны");
+        }
+
+        if (!Float.isFinite(lat) || lat < -90 || lat > 90) {
+            throw new ValidationException("Некорректная широта");
+        }
+
+        if (!Float.isFinite(lon) || lon < -180 || lon > 180) {
+            throw new ValidationException("Некорректная долгота");
+        }
+
+        Location location = Location.builder()
+                .lat(lat)
+                .lon(lon)
+                .locationType(LocationType.OTHER)
+                .createdAt(java.time.Instant.now())
+                .build();
+
+        Location saved = locationRepository.save(location);
+
+        return locationMapper.toDto(saved);
+    }
+}
