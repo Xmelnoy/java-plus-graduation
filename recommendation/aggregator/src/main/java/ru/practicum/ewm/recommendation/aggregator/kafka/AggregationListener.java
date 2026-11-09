@@ -24,7 +24,7 @@ public class AggregationListener {
     @Value("${kafka.topics.events-similarity:stats.events-similarity.v1}")
     private String similarityTopic;
 
-    @KafkaListener(topics = "${kafka.topics.user-actions:stats.user-actions.v1}")
+    @KafkaListener(topics = "${kafka.topics.user-actions:stats.user-actions.v1}", groupId = "aggregator-group")
     public void handleUserAction(UserActionAvro action) {
         log.debug("Aggregator получил действие: userId={}, eventId={}, type={}",
                 action.getUserId(), action.getEventId(), action.getActionType());
