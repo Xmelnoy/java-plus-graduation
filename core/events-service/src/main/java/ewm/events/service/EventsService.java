@@ -37,4 +37,8 @@ public interface EventsService {
     List<EventShortDto> getInternalEvents(List<Long> eventIds);
 
     boolean hasEventsByCategory(Long categoryId);
+
+    List<EventShortDto> getRecommendations(long userId, int size);
+
+    void likeEvent(long userId, long eventId);
 }

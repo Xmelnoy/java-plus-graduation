@@ -3,6 +3,7 @@ package ewm.client;
 import ewm.client.fallback.RequestClientFallback;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
@@ -15,4 +16,8 @@ public interface RequestClient {
     Map<Long, Long> getConfirmedRequestsCount(
             @RequestParam("eventIds") List<Long> eventIds
     );
+
+    @GetMapping("/internal/requests/users/{userId}/events/{eventId}/confirmed")
+    Boolean hasUserConfirmedRequest(@PathVariable("userId") Long userId,
+                                    @PathVariable("eventId") Long eventId);
 }

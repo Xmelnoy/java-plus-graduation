@@ -34,9 +34,12 @@ public interface ParticipationRequestsRepository
 
     boolean existsByRequesterIdAndEventId(Long requesterId, Long eventId);
 
+    boolean existsByRequesterIdAndEventIdAndStatus(Long requesterId, Long eventId, ParticipationStatus status);
+
     Optional<ParticipationRequest> findByEventIdAndRequesterId(Long eventId, Long requesterId);
 
     List<ParticipationRequest> findAllByEventId(Long eventId);
+
     List<ParticipationRequest> findAllByEventIdAndStatus(Long eventId, ParticipationStatus status);
 
     List<ParticipationRequest> findAllByIdIn(List<Long> ids);

@@ -8,7 +8,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Import;
 
 @SpringBootApplication(
-        scanBasePackages = {"ewm", "exception"}
+        scanBasePackages = {"ewm", "client", "exception"}
 )
 @EnableFeignClients
 @EnableDiscoveryClient
