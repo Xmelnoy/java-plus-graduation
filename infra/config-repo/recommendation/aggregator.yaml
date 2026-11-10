@@ -29,4 +29,4 @@ eureka:
   instance:
     prefer-ip-address: true
     metadata-map:
-      gRPC_port: ${grpc.server.port}
+      gRPC_port: "9092"
