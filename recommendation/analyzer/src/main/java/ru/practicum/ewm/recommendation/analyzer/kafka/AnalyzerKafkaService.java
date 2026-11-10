@@ -21,7 +21,14 @@ public class AnalyzerKafkaService {
     private final EventSimilarityRepository similarityRepository;
 
     @Transactional
-    @KafkaListener(topics = "${kafka.topics.user-actions:stats.user-actions.v1}", groupId = "analyzer-actions-group")
+    @KafkaListener(
+            topics = "${kafka.topics.user-actions:stats.user-actions.v1}",
+            groupId = "analyzer-actions-group",
+            properties = {
+                    "key.deserializer=org.apache.kafka.common.serialization.LongDeserializer",
+                    "value.deserializer=ru.practicum.ewm.stats.kafka.deserializer.UserActionDeserializer"
+            }
+    )
     public void handleUserAction(UserActionAvro avro) {
         double weight = switch (avro.getActionType()) {
             case VIEW -> 0.4;
@@ -51,7 +58,14 @@ public class AnalyzerKafkaService {
     }
 
     @Transactional
-    @KafkaListener(topics = "${kafka.topics.events-similarity:stats.events-similarity.v1}", groupId = "analyzer-similarity-group")
+    @KafkaListener(
+            topics = "${kafka.topics.events-similarity:stats.events-similarity.v1}",
+            groupId = "analyzer-similarity-group",
+            properties = {
+                    "key.deserializer=org.apache.kafka.common.serialization.LongDeserializer",
+                    "value.deserializer=ru.practicum.ewm.stats.kafka.deserializer.EventSimilarityDeserializer"
+            }
+    )
     public void handleEventSimilarity(EventSimilarityAvro avro) {
         EventSimilarity entity = similarityRepository
                 .findByEventAAndEventB(avro.getEventA(), avro.getEventB())
