@@ -10,7 +10,7 @@ spring:
     bootstrap-servers: localhost:9092
     producer:
       key-serializer: org.apache.kafka.common.serialization.LongSerializer
-      value-serializer: ru.practicum.ewm.stats.kafka.GeneralAvroSerializer
+      value-serializer: ru.practicum.ewm.stats.kafka.serializer.GeneralAvroSerializer
 
 kafka:
   topics:

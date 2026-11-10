@@ -12,10 +12,10 @@ spring:
       group-id: aggregator-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.LongDeserializer
-      value-deserializer: ru.practicum.ewm.stats.kafka.UserActionDeserializer
+      value-deserializer: ru.practicum.ewm.stats.kafka.deserializer.UserActionDeserializer
     producer:
       key-serializer: org.apache.kafka.common.serialization.LongSerializer
-      value-serializer: ru.practicum.ewm.stats.kafka.GeneralAvroSerializer
+      value-serializer: ru.practicum.ewm.stats.kafka.serializer.GeneralAvroSerializer
 
 kafka:
   topics:
