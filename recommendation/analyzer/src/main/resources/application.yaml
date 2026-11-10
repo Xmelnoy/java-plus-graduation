@@ -2,7 +2,13 @@ spring:
   application:
     name: analyzer
   config:
-    import: optional:configserver:http://localhost:8888/
+    import: "optional:configserver:"
+  cloud:
+    config:
+      discovery:
+        enabled: true
+        service-id: config-server
+      fail-fast: false
 
 server:
   port: 0
@@ -10,17 +16,6 @@ server:
 grpc:
   server:
     port: 0
-
-  cloud:
-    config:
-      discovery:
-        enabled: true
-        service-id: config-server
-      fail-fast: false
-      retry:
-        max-attempts: 6
-        initial-interval: 2000
-        multiplier: 1.5
 
 eureka:
   client:
