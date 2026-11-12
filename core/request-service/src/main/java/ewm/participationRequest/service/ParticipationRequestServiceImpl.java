@@ -1,5 +1,6 @@
 package ewm.participationRequest.service;
 
+import client.CollectorClient;
 import enums.State;
 import enums.ParticipationStatus;
 import dto.EventShortDto;
@@ -22,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.ewm.stats.proto.ActionTypeProto;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -37,6 +39,7 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
     private final ParticipationRequestMapper requestMapper;
     private final UserClient userClient;
     private final EventClient eventClient;
+    private final CollectorClient collectorClient;
 
     @Override
     public List<ParticipationRequestDto> getUserRequests(Long userId) {
@@ -83,6 +86,12 @@ public class ParticipationRequestServiceImpl implements ParticipationRequestServ
             request.setStatus(ParticipationStatus.CONFIRMED);
         } else {
             request.setStatus(ParticipationStatus.PENDING);
+        }
+
+        try {
+            collectorClient.collectUserAction(userId, eventId, ActionTypeProto.ACTION_REGISTER);
+        } catch (Exception e) {
+            log.warn("Не удалось отправить действие в Collector: {}", e.getMessage());
         }
 
         ParticipationRequest savedRequest = requestRepository.save(request);

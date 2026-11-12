@@ -18,4 +18,10 @@ public class RequestClientFallback implements RequestClient {
         return eventIds.stream()
                 .collect(Collectors.toMap(id -> id, id -> 0L));
     }
+
+    @Override
+    public Boolean hasUserConfirmedRequest(Long userId, Long eventId) {
+        log.warn("Fallback RequestClient: сервис request-service недоступен при проверке заявки userId={}, eventId={}", userId, eventId);
+        return false;
+    }
 }
